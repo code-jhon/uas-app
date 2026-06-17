@@ -23,6 +23,15 @@ const pt: Resources = {
     hoursShort: 'h',
   },
 
+  dateTimeRange: {
+    from: 'De',
+    to: 'Até',
+    start: 'Início',
+    end: 'Fim',
+    invalidDate: 'A data inicial não pode ser posterior à data final',
+    invalidTime: 'A hora inicial não pode ser posterior à hora final',
+  },
+
   tabs: {
     home: 'Início',
     metar: 'METAR',

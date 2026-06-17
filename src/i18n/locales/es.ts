@@ -21,6 +21,15 @@ const es = {
     hoursShort: 'h',
   },
 
+  dateTimeRange: {
+    from: 'Desde',
+    to: 'Hasta',
+    start: 'Inicio',
+    end: 'Fin',
+    invalidDate: 'La fecha inicial no puede ser posterior a la fecha final',
+    invalidTime: 'La hora inicial no puede ser posterior a la hora final',
+  },
+
   tabs: {
     home: 'Inicio',
     metar: 'METAR',
