@@ -23,6 +23,15 @@ const en: Resources = {
     hoursShort: 'h',
   },
 
+  dateTimeRange: {
+    from: 'From',
+    to: 'To',
+    start: 'Start',
+    end: 'End',
+    invalidDate: 'Start date cannot be after end date',
+    invalidTime: 'Start time cannot be after end time',
+  },
+
   tabs: {
     home: 'Home',
     metar: 'METAR',

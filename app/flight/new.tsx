@@ -13,6 +13,7 @@ import { FlightRole, FlightType } from '../../src/types';
 import { format } from 'date-fns';
 import DatePickerField, { type PickerColors } from '../../src/components/DatePickerField';
 import TimePickerField from '../../src/components/TimePickerField';
+import { isValidTimeRange, minutesOfDay } from '../../src/utils/dateTimeRange';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -176,10 +177,12 @@ export default function NewFlightScreen() {
   // Auto-calculate total time when both block times are set and totalTime is empty
   useEffect(() => {
     if (!blockOut || !blockIn || totalTime) return;
-    const [oh, om] = blockOut.split(':').map(Number);
-    const [ih, im] = blockIn.split(':').map(Number);
-    if (isNaN(oh) || isNaN(om) || isNaN(ih) || isNaN(im)) return;
-    const diff = Math.abs(ih * 60 + im - (oh * 60 + om));
+    // Skip auto-calc for inverted ranges (arrival before departure); save guards it.
+    if (!isValidTimeRange(blockOut, blockIn)) return;
+    const out = minutesOfDay(blockOut);
+    const back = minutesOfDay(blockIn);
+    if (isNaN(out) || isNaN(back)) return;
+    const diff = back - out;
     if (diff > 0) setTotalTime(String(Math.round((diff / 60) * 10) / 10));
   }, [blockOut, blockIn]);
 
@@ -235,15 +238,16 @@ export default function NewFlightScreen() {
     if (isUAS && !site) {
       Alert.alert(t('flight.new.missingTitle'), t('flight.new.missingSite')); return;
     }
+    if (blockOut && blockIn && !isValidTimeRange(blockOut, blockIn)) {
+      Alert.alert(t('flight.new.missingTitle'), t('dateTimeRange.invalidTime')); return;
+    }
 
     setSaving(true);
     try {
       let total = parseFloat(totalTime) || undefined;
       if (!total && blockOut && blockIn) {
-        const [oh, om] = blockOut.split(':').map(Number);
-        const [ih, im] = blockIn.split(':').map(Number);
-        const diff = ih * 60 + im - (oh * 60 + om);
-        total = Math.round((Math.abs(diff) / 60) * 10) / 10;
+        const diff = minutesOfDay(blockIn) - minutesOfDay(blockOut);
+        total = Math.round((diff / 60) * 10) / 10;
       }
 
       if (isUAS) {
