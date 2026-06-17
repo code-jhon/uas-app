@@ -9,6 +9,7 @@ import { fetchMetarBatch } from '../../src/api/awc';
 import { fetchKpCurrent } from '../../src/api/swpc';
 import { kpColor } from '../../src/api/swpc';
 import MetarCard from '../../src/components/MetarCard';
+import FlightConditionsBanner from '../../src/components/FlightConditionsBanner';
 import { getFlightStats } from '../../src/db/flights';
 
 export default function HomeScreen() {
@@ -97,6 +98,13 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* Flight conditions banner */}
+      <FlightConditionsBanner
+        metar={favorites.length ? metars?.get(favorites[0].icao) : undefined}
+        kp={latestKp}
+        hasFavorites={favorites.length > 0}
+      />
+
       {/* Quick actions */}
       <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginBottom: 24 }}>
         <TouchableOpacity
@@ -112,6 +120,13 @@ export default function HomeScreen() {
         >
           <PlaneTakeoff size={18} color={text} />
           <Text style={{ color: text, fontWeight: '600', fontSize: 14 }}>{t('home.preFlight')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => router.push('/flight-conditions')}
+          style={{ flex: 1, backgroundColor: card, borderRadius: 12, padding: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: border }}
+        >
+          <CloudSun size={18} color={text} />
+          <Text style={{ color: text, fontWeight: '600', fontSize: 14 }}>{t('home.forecast')}</Text>
         </TouchableOpacity>
       </View>
 

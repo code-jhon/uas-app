@@ -6,6 +6,7 @@ Aplicación **offline-first** en React Native / Expo para pilotos de aviación y
 
 - **METAR** — búsqueda con autocompletado (aeropuertos de Colombia), decodificación en español y cache offline de 6 horas (NOAA AWC).
 - **Índice Kp** — gauge, gráfico de 24 h, pronóstico a 3 días y análisis de impacto (NOAA SWPC).
+- **Condiciones de vuelo (go / no-go)** — banner resumen en Home y pantalla de detalle que combinan METAR + Kp en un nivel general (Buenas / Regulares / Malas) por el peor factor: viento, visibilidad, techo, índice Kp y fenómenos. Acceso al visor geográfico de zonas UAS de la Aerocivil (ArcGIS).
 - **Checklists** — plantillas prearmadas (Cessna 172 VFR/post, genéricos, RPAS), editor de checklists personalizados y ejecución con estados (ok / N/A / omitido + razón).
 - **Bitácora tripulada** — campos OACI con cálculo automático de tiempo de vuelo.
 - **Bitácora UAS / Drone** — sitio de operación, captura GPS + geocodificación inversa, altitud y distancia máximas, VLOS/BVLOS, tipo de misión.
@@ -50,4 +51,5 @@ El producto se especifica en [`docs/PRD.md`](docs/PRD.md). Las estrategias de im
 
 ## Changelog
 
+- **2026-06-17 — PAR-6**: banner de condiciones de vuelo en Home + pantalla de detalle `flight-conditions`. Evaluación go/no-go (peor factor) sobre datos METAR + Kp existentes. Nuevos: `src/utils/flightConditions.ts`, `src/components/FlightConditionsBanner.tsx`, `app/flight-conditions.tsx`; helper `getLastUasFlightLocation` en `src/db/flights.ts` para centrar el visor UAS de ArcGIS. Botón "Pronóstico" en Quick Actions y ruta stack registrada en `app/_layout.tsx`. Claves i18n `flightConditions` + `home.forecast` en es/en/pt. Nota: el gradiente del banner se aproxima con `View`s para evitar agregar el módulo nativo `expo-linear-gradient`.
 - **2026-06-17 — PAR-5**: utilidad y componentes reutilizables de rango de fecha/hora que garantizan `inicio ≤ fin`. Nuevos: `src/utils/dateTimeRange.ts`, `src/components/DateRangeField.tsx`, `src/components/TimeRangeField.tsx`. La validación de hora se aplica a `blockOut`/`blockIn` en el formulario de vuelo (no se puede guardar con la llegada anterior a la salida; el autocálculo de tiempo total usa resta directa en lugar de `Math.abs`). Claves i18n `dateTimeRange` en los tres idiomas.
