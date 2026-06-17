@@ -58,6 +58,22 @@ export async function getFlightById(id: string): Promise<Flight | null> {
   return row ? rowToFlight(row) : null;
 }
 
+/**
+ * Returns the GPS coordinates of the most recent UAS flight that has them,
+ * or null if no UAS flight with coordinates exists. Used to center the
+ * external ArcGIS UAS airspace viewer.
+ */
+export async function getLastUasFlightLocation(): Promise<{ lat: number; lng: number } | null> {
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{ lat: number; lng: number }>(
+    `SELECT lat, lng FROM flight
+     WHERE flight_type = 'uas' AND lat IS NOT NULL AND lng IS NOT NULL
+     ORDER BY date DESC, created_at DESC
+     LIMIT 1`
+  );
+  return row && row.lat != null && row.lng != null ? { lat: row.lat, lng: row.lng } : null;
+}
+
 export async function createFlight(data: Omit<Flight, 'id' | 'createdAt'>): Promise<Flight> {
   const db = await getDatabase();
   const id = randomUUID();
