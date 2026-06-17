@@ -32,10 +32,13 @@ expo-env.d.ts
 ios/
 android/
 
+docs/
+
 # Logs
 *.log
 npm-debug.*
 yarn-debug.*
+yarn-error.*
 yarn-error.*
 
 # Markdown docs (excluding README)
