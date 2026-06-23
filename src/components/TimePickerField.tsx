@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, Modal, Platform, useColorScheme,
-} from 'react-native';
+  View, Text, TouchableOpacity, Modal, Platform, } from 'react-native';
+import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import { Clock } from 'lucide-react-native';
@@ -24,7 +24,7 @@ function toDate(value: string): Date {
 
 export default function TimePickerField({ value, onChange, colors }: Props) {
   const { t } = useTranslation();
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useAppColorScheme() === 'dark';
   const [open, setOpen] = useState(false);
 
   const timeObj = toDate(value);

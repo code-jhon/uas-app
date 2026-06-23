@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
-  useColorScheme, KeyboardAvoidingView, Platform, Alert, Switch, ActivityIndicator,
+  KeyboardAvoidingView, Platform, Alert, Switch, ActivityIndicator,
 } from 'react-native';
+import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Save, Plane, Cpu, MapPin, CheckCircle } from 'lucide-react-native';
@@ -115,7 +116,7 @@ export default function NewFlightScreen() {
   const { t }         = useTranslation();
   const { icao }      = useLocalSearchParams<{ icao?: string }>();
   const qc            = useQueryClient();
-  const isDark        = useColorScheme() === 'dark';
+  const isDark        = useAppColorScheme() === 'dark';
 
   const bg     = isDark ? '#0F1419' : '#FFFFFF';
   const bgSec  = isDark ? '#1A1F26' : '#F5F7FA';

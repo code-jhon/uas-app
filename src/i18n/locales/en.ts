@@ -49,6 +49,12 @@ const en: Resources = {
     languageEs: 'Spanish',
     languageEn: 'English',
     languagePt: 'Portuguese',
+    theme: 'Theme',
+    themeDesc: 'Choose how the app looks',
+    themeSystem: 'System',
+    themeSystemDesc: 'Follow the phone appearance',
+    themeLight: 'Light',
+    themeDark: 'Dark',
   },
 
   home: {

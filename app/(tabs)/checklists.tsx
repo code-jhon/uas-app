@@ -1,4 +1,5 @@
-import { View, Text, FlatList, TouchableOpacity, useColorScheme, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +10,7 @@ import { Checklist } from '../../src/types';
 export default function ChecklistsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const scheme = useColorScheme();
+  const scheme = useAppColorScheme();
   const isDark = scheme === 'dark';
   const qc = useQueryClient();
 

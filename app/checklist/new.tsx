@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
-  useColorScheme, KeyboardAvoidingView, Platform, Alert,
+  KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
+import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react-native';
@@ -18,7 +19,7 @@ export default function NewChecklistScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const scheme = useColorScheme();
+  const scheme = useAppColorScheme();
   const isDark = scheme === 'dark';
 
   const bg = isDark ? '#0f172a' : '#f8fafc';

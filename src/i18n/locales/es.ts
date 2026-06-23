@@ -47,6 +47,12 @@ const es = {
     languageEs: 'Español',
     languageEn: 'Inglés',
     languagePt: 'Portugués',
+    theme: 'Tema',
+    themeDesc: 'Elige cómo se ve la app',
+    themeSystem: 'Sistema',
+    themeSystemDesc: 'Seguir la apariencia del teléfono',
+    themeLight: 'Claro',
+    themeDark: 'Oscuro',
   },
 
   home: {

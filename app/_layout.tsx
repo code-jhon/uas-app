@@ -6,8 +6,9 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { getDatabase } from '../src/db/database';
-import { useColorScheme } from 'react-native';
+import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useLocaleStore } from '../src/store/localeStore';
+import { useThemeStore } from '../src/store/themeStore';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,16 +21,19 @@ const queryClient = new QueryClient({
 });
 
 export default function RootLayout() {
-  const scheme = useColorScheme();
+  const scheme = useAppColorScheme();
 
   const loadLocale = useLocaleStore((s) => s.load);
+  const loadTheme = useThemeStore((s) => s.load);
 
   useEffect(() => {
     // Initialize DB on app start
     getDatabase().catch(console.error);
     // Apply stored language preference (defaults to phone language)
     loadLocale();
-  }, [loadLocale]);
+    // Apply stored theme preference (defaults to phone appearance)
+    loadTheme();
+  }, [loadLocale, loadTheme]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { useColorScheme } from 'react-native';
+import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useTranslation } from 'react-i18next';
 import { Home, CloudSun, ListChecks, BookOpen, Activity } from 'lucide-react-native';
 
@@ -9,7 +9,7 @@ const INACTIVE_LIGHT = '#94a3b8';
 
 export default function TabLayout() {
   const { t } = useTranslation();
-  const scheme = useColorScheme();
+  const scheme = useAppColorScheme();
   const isDark = scheme === 'dark';
   const bg = isDark ? '#0f172a' : '#ffffff';
   const inactive = isDark ? INACTIVE_DARK : INACTIVE_LIGHT;

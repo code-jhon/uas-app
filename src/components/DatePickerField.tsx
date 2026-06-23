@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, Modal, Platform, useColorScheme,
-} from 'react-native';
+  View, Text, TouchableOpacity, Modal, Platform, } from 'react-native';
+import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format, parse, isValid } from 'date-fns';
 import { Calendar } from 'lucide-react-native';
@@ -26,7 +26,7 @@ interface Props {
 
 export default function DatePickerField({ value, onChange, colors, maximumDate, minimumDate }: Props) {
   const { t } = useTranslation();
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useAppColorScheme() === 'dark';
   const [open, setOpen] = useState(false);
 
   const parsed = value ? parse(value, 'yyyy-MM-dd', new Date()) : new Date();

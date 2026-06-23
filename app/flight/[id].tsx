@@ -1,8 +1,9 @@
 import React from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  useColorScheme, Image, Linking, Alert, ActivityIndicator,
+  Image, Linking, Alert, ActivityIndicator,
 } from 'react-native';
+import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -314,7 +315,7 @@ export default function FlightDetailScreen() {
   const { id }  = useLocalSearchParams<{ id: string }>();
   const router  = useRouter();
   const { t }   = useTranslation();
-  const isDark  = useColorScheme() === 'dark';
+  const isDark  = useAppColorScheme() === 'dark';
 
   const bg       = isDark ? '#0F1419' : '#F5F7FA';
   const card     = isDark ? '#1E2530' : '#FFFFFF';

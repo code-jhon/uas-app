@@ -5,8 +5,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Linking,
-  useColorScheme,
-} from 'react-native';
+  } from 'react-native';
+import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -53,7 +53,7 @@ function StatusIcon({ level, color, size = 22 }: { level: FlightConditionLevel; 
 export default function FlightConditionsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useAppColorScheme() === 'dark';
   const favorites = useFavoritesStore((s) => s.favorites);
   const primary = favorites[0];
 
