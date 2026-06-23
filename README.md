@@ -12,6 +12,7 @@ Aplicación **offline-first** en React Native / Expo para pilotos de aviación y
 - **Bitácora UAS / Drone** — sitio de operación, captura GPS + geocodificación inversa, altitud y distancia máximas, VLOS/BVLOS, tipo de misión.
 - **Exportación / importación** — JSON, CSV y PDF, con deduplicación al importar.
 - **i18n** — español (fuente de verdad), inglés y portugués (pt-BR), con detección del idioma del sistema.
+- **Tema (Claro / Oscuro / Sistema)** — selector en Configuración que fuerza el tema de toda la app o sigue la apariencia del teléfono; aplica al instante y persiste (SecureStore).
 
 ## Stack
 
@@ -51,5 +52,6 @@ El producto se especifica en [`docs/PRD.md`](docs/PRD.md). Las estrategias de im
 
 ## Changelog
 
+- **2026-06-23 — PAR-7**: selector de tema (Claro / Oscuro / Sistema) en Configuración. Nuevos: `src/store/themeStore.ts` (preferencia persistida en SecureStore con clave `pl-theme`, espejo de `localeStore`) y `src/hooks/useAppColorScheme.ts` (resuelve el esquema efectivo). El cambio se conduce vía NativeWind (`setColorScheme`) para mantener en sync los estilos inline `isDark` y las clases `dark:`. Se migraron los 18 consumidores de `useColorScheme()` de React Native al hook `useAppColorScheme()`; `app/_layout.tsx` carga la preferencia al arrancar y deriva la `StatusBar` del esquema efectivo. Nueva sección "Tema" en `app/settings.tsx` y claves i18n `settings.theme*` en es/en/pt.
 - **2026-06-17 — PAR-6**: banner de condiciones de vuelo en Home + pantalla de detalle `flight-conditions`. Evaluación go/no-go (peor factor) sobre datos METAR + Kp existentes. Nuevos: `src/utils/flightConditions.ts`, `src/components/FlightConditionsBanner.tsx`, `app/flight-conditions.tsx`; helper `getLastUasFlightLocation` en `src/db/flights.ts` para centrar el visor UAS de ArcGIS. Botón "Pronóstico" en Quick Actions y ruta stack registrada en `app/_layout.tsx`. Claves i18n `flightConditions` + `home.forecast` en es/en/pt. Nota: el gradiente del banner se aproxima con `View`s para evitar agregar el módulo nativo `expo-linear-gradient`.
 - **2026-06-17 — PAR-5**: utilidad y componentes reutilizables de rango de fecha/hora que garantizan `inicio ≤ fin`. Nuevos: `src/utils/dateTimeRange.ts`, `src/components/DateRangeField.tsx`, `src/components/TimeRangeField.tsx`. La validación de hora se aplica a `blockOut`/`blockIn` en el formulario de vuelo (no se puede guardar con la llegada anterior a la salida; el autocálculo de tiempo total usa resta directa en lugar de `Math.abs`). Claves i18n `dateTimeRange` en los tres idiomas.
