@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, useColorScheme } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +11,7 @@ export default function ChecklistDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { t } = useTranslation();
-  const scheme = useColorScheme();
+  const scheme = useAppColorScheme();
   const isDark = scheme === 'dark';
 
   const bg = isDark ? '#0f172a' : '#f8fafc';

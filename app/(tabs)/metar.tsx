@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  ActivityIndicator, useColorScheme, KeyboardAvoidingView, Platform, Keyboard,
+  ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard,
 } from 'react-native';
+import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +16,7 @@ import { COLOMBIA_AIRPORTS } from '../../src/data/airports';
 export default function MetarScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const scheme = useColorScheme();
+  const scheme = useAppColorScheme();
   const isDark = scheme === 'dark';
   const [query, setQuery] = useState('');
   const [submitted, setSubmitted] = useState('');

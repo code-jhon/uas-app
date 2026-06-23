@@ -1,15 +1,21 @@
-import { View, Text, ScrollView, TouchableOpacity, useColorScheme } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Check, Globe, Smartphone } from 'lucide-react-native';
+import { ArrowLeft, Check, Globe, Smartphone, SunMoon, Sun, Moon } from 'lucide-react-native';
 import { useLocaleStore, LanguagePreference } from '../src/store/localeStore';
+import { useThemeStore, ThemePreference } from '../src/store/themeStore';
+import type { ComponentType } from 'react';
+import type { LucideProps } from 'lucide-react-native';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useAppColorScheme() === 'dark';
   const preference = useLocaleStore((s) => s.preference);
   const setPreference = useLocaleStore((s) => s.setPreference);
+  const themePreference = useThemeStore((s) => s.preference);
+  const setThemePreference = useThemeStore((s) => s.setPreference);
 
   const bg = isDark ? '#0f172a' : '#f8fafc';
   const card = isDark ? '#1e293b' : '#ffffff';
@@ -23,6 +29,12 @@ export default function SettingsScreen() {
     { value: 'es', label: t('settings.languageEs') },
     { value: 'en', label: t('settings.languageEn') },
     { value: 'pt', label: t('settings.languagePt') },
+  ];
+
+  const themeOptions: Array<{ value: ThemePreference; label: string; desc?: string; icon: ComponentType<LucideProps> }> = [
+    { value: 'system', label: t('settings.themeSystem'), desc: t('settings.themeSystemDesc'), icon: Smartphone },
+    { value: 'light', label: t('settings.themeLight'), icon: Sun },
+    { value: 'dark', label: t('settings.themeDark'), icon: Moon },
   ];
 
   return (
@@ -59,6 +71,40 @@ export default function SettingsScreen() {
                 }}
               >
                 {opt.system && <Smartphone size={16} color={sub} />}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: text, fontSize: 15, fontWeight: active ? '700' : '500' }}>{opt.label}</Text>
+                  {opt.desc && <Text style={{ color: sub, fontSize: 12, marginTop: 2 }}>{opt.desc}</Text>}
+                </View>
+                {active && <Check size={18} color={accent} />}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Theme section */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24, marginBottom: 10 }}>
+          <SunMoon size={16} color={sub} />
+          <Text style={{ color: sub, fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            {t('settings.theme')}
+          </Text>
+        </View>
+        <Text style={{ color: sub, fontSize: 13, marginBottom: 12 }}>{t('settings.themeDesc')}</Text>
+
+        <View style={{ backgroundColor: card, borderRadius: 12, borderWidth: 1, borderColor: border, overflow: 'hidden' }}>
+          {themeOptions.map((opt, i) => {
+            const active = themePreference === opt.value;
+            const Icon = opt.icon;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                onPress={() => setThemePreference(opt.value)}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 12,
+                  paddingHorizontal: 16, paddingVertical: 14,
+                  borderTopWidth: i === 0 ? 0 : 1, borderTopColor: border,
+                }}
+              >
+                <Icon size={16} color={sub} />
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: text, fontSize: 15, fontWeight: active ? '700' : '500' }}>{opt.label}</Text>
                   {opt.desc && <Text style={{ color: sub, fontSize: 12, marginTop: 2 }}>{opt.desc}</Text>}

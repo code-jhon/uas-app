@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, useColorScheme, Alert,
+  View, Text, FlatList, TouchableOpacity, Alert,
   Modal, ActivityIndicator,
 } from 'react-native';
+import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -42,7 +43,7 @@ interface C {
 }
 
 function useC(): C {
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useAppColorScheme() === 'dark';
   return {
     bg:          isDark ? '#0F1419' : '#F5F7FA',
     card:        isDark ? '#1E2530' : '#FFFFFF',

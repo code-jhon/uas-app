@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, TouchableOpacity, ScrollView, useColorScheme,
-  Modal, TextInput, Alert, Platform,
+  View, Text, TouchableOpacity, ScrollView, Modal, TextInput, Alert, Platform,
 } from 'react-native';
+import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +15,7 @@ export default function ExecuteChecklistScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const scheme = useColorScheme();
+  const scheme = useAppColorScheme();
   const isDark = scheme === 'dark';
 
   const bg = isDark ? '#0f172a' : '#f8fafc';

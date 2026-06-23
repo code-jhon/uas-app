@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, useColorScheme } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +16,7 @@ import { getFlightStats } from '../../src/db/flights';
 export default function HomeScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const scheme = useColorScheme();
+  const scheme = useAppColorScheme();
   const isDark = scheme === 'dark';
   const favorites = useFavoritesStore((s) => s.favorites);
   const profile = useAuthStore((s) => s.profile);
