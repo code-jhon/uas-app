@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, Modal, TextInput, Alert, Platform,
 } from 'react-native';
@@ -25,6 +25,7 @@ export default function ExecuteChecklistScreen() {
   const border = isDark ? '#334155' : '#e2e8f0';
 
   const [sectionIdx, setSectionIdx] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
   const [executionId, setExecutionId] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, { status: ItemStatus; note?: string }>>({});
   const [skipModal, setSkipModal] = useState<{ item: ChecklistItem } | null>(null);
@@ -43,6 +44,11 @@ export default function ExecuteChecklistScreen() {
       startExecution(checklist.id, checklist.name).then(setExecutionId).catch(console.error);
     }
   }, [checklist, executionId]);
+
+  // Reset scroll to top whenever the section changes (PAR-8)
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [sectionIdx]);
 
   const sections = checklist?.sections ?? [];
   const currentSection = sections[sectionIdx];
@@ -162,7 +168,7 @@ export default function ExecuteChecklistScreen() {
       </View>
 
       {/* Items */}
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}>
+      <ScrollView ref={scrollRef} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}>
         {currentSection?.items.map((item) => {
           const result = results[item.id];
           const status = result?.status;
