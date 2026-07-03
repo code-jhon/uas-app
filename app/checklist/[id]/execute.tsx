@@ -11,7 +11,7 @@ import { getChecklistById, startExecution, saveItemResult, completeExecution } f
 import { ChecklistItem, ItemStatus } from '../../../src/types';
 
 export default function ExecuteChecklistScreen() {
-  const { id, name } = useLocalSearchParams<{ id: string; name: string }>();
+  const { id, name, returnTo } = useLocalSearchParams<{ id: string; name: string; returnTo?: string }>();
   const router = useRouter();
   const { t } = useTranslation();
   const qc = useQueryClient();
@@ -95,7 +95,11 @@ export default function ExecuteChecklistScreen() {
     try {
       await completeExecution(executionId);
       qc.invalidateQueries({ queryKey: ['executions'] });
-      router.back();
+      if (returnTo) {
+        router.replace({ pathname: returnTo as never, params: { completedExecutionId: executionId, completedExecutionName: checklist?.name ?? name ?? '' } });
+      } else {
+        router.back();
+      }
     } catch (e) {
       Alert.alert(t('common.error'), (e as Error).message);
     } finally {

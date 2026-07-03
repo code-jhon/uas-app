@@ -157,7 +157,19 @@ export async function startExecution(checklistId: string, checklistName: string)
   return id;
 }
 
+async function assertNotCompleted(executionId: string): Promise<void> {
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{ completed_at: string | null }>(
+    `SELECT completed_at FROM checklist_execution WHERE id = ?`,
+    [executionId]
+  );
+  if (row?.completed_at) {
+    throw new Error('Execution already completed');
+  }
+}
+
 export async function saveItemResult(result: Omit<ChecklistItemResult, 'id' | 'timestamp'>): Promise<void> {
+  await assertNotCompleted(result.executionId);
   const db = await getDatabase();
   // upsert by execution_id + item_id
   const existing = await db.getFirstAsync<{ id: string }>(
@@ -178,11 +190,93 @@ export async function saveItemResult(result: Omit<ChecklistItemResult, 'id' | 't
 }
 
 export async function completeExecution(executionId: string, linkedFlightId?: string): Promise<void> {
+  await assertNotCompleted(executionId);
   const db = await getDatabase();
   await db.runAsync(
     `UPDATE checklist_execution SET completed_at=?, linked_flight_id=? WHERE id=?`,
     [new Date().toISOString(), linkedFlightId ?? null, executionId]
   );
+}
+
+/**
+ * Links a batch of already-completed executions to a flight without
+ * touching completed_at (unlike completeExecution, which sets it).
+ * Used when saving a new flight that had checklists executed inline.
+ */
+export async function linkExecutionsToFlight(executionIds: string[], flightId: string): Promise<void> {
+  if (executionIds.length === 0) return;
+  const db = await getDatabase();
+  for (const id of executionIds) {
+    await db.runAsync(
+      `UPDATE checklist_execution SET linked_flight_id = ? WHERE id = ?`,
+      [flightId, id]
+    );
+  }
+}
+
+/**
+ * Fetches executions for a set of flights in one pass, grouped by flightId.
+ * Avoids the 50-row LIMIT that getExecutions() applies without a flightId.
+ */
+export async function getExecutionsForFlights(flightIds: string[]): Promise<Record<string, ChecklistExecution[]>> {
+  const grouped: Record<string, ChecklistExecution[]> = {};
+  if (flightIds.length === 0) return grouped;
+
+  const db = await getDatabase();
+  const placeholders = flightIds.map(() => '?').join(',');
+  const rows = await db.getAllAsync<Record<string, unknown>>(
+    `SELECT * FROM checklist_execution WHERE linked_flight_id IN (${placeholders}) ORDER BY started_at DESC`,
+    flightIds
+  );
+
+  for (const row of rows) {
+    const results = await db.getAllAsync<Record<string, unknown>>(
+      `SELECT * FROM checklist_item_result WHERE execution_id = ?`,
+      [row.id as string]
+    );
+    const flightId = row.linked_flight_id as string;
+    const execution: ChecklistExecution = {
+      id: row.id as string,
+      checklistId: row.checklist_id as string,
+      checklistName: row.checklist_name as string,
+      startedAt: row.started_at as string,
+      completedAt: (row.completed_at as string) ?? undefined,
+      linkedFlightId: flightId,
+      results: results.map((r) => ({
+        id: r.id as string,
+        executionId: row.id as string,
+        itemId: r.item_id as string,
+        status: r.status as ChecklistItemResult['status'],
+        note: (r.note as string) ?? undefined,
+        value: (r.value as string) ?? undefined,
+        timestamp: r.timestamp as string,
+      })),
+    };
+    if (!grouped[flightId]) grouped[flightId] = [];
+    grouped[flightId].push(execution);
+  }
+  return grouped;
+}
+
+/**
+ * Deletes all executions (and, via ON DELETE CASCADE, their item results)
+ * linked to a flight. Called before deleting the flight itself. Never
+ * touches the source checklist in the catalog.
+ */
+export async function deleteExecutionsByFlight(flightId: string): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(`DELETE FROM checklist_execution WHERE linked_flight_id = ?`, [flightId]);
+}
+
+/**
+ * Deletes a single execution that was never linked to a flight — used to
+ * clean up orphaned executions left behind when the user completes a
+ * checklist while creating a flight and then abandons the flight form
+ * without saving.
+ */
+export async function deleteExecution(executionId: string): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(`DELETE FROM checklist_execution WHERE id = ? AND linked_flight_id IS NULL`, [executionId]);
 }
 
 export async function getExecutions(flightId?: string): Promise<ChecklistExecution[]> {

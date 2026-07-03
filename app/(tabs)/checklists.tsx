@@ -3,7 +3,7 @@ import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Plus, Copy, Trash2, Play, ChevronRight, ClipboardList } from 'lucide-react-native';
+import { Plus, Copy, Trash2, ChevronRight, ClipboardList } from 'lucide-react-native';
 import { getChecklists, deleteChecklist, cloneTemplate } from '../../src/db/checklists';
 import { Checklist } from '../../src/types';
 
@@ -49,10 +49,6 @@ export default function ChecklistsScreen() {
     ]);
   };
 
-  const handleStart = (cl: Checklist) => {
-    router.push({ pathname: '/checklist/[id]/execute', params: { id: cl.id, name: cl.name } });
-  };
-
   const renderItem = ({ item }: { item: Checklist }) => (
     <View style={{ backgroundColor: card, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: border, overflow: 'hidden' }}>
       <TouchableOpacity
@@ -80,14 +76,6 @@ export default function ChecklistsScreen() {
         </View>
       </TouchableOpacity>
       <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: border }}>
-        <TouchableOpacity
-          onPress={() => handleStart(item)}
-          style={{ flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10 }}
-        >
-          <Play size={14} color="#38bdf8" />
-          <Text style={{ color: '#38bdf8', fontWeight: '600', fontSize: 13 }}>{t('checklists.list.execute')}</Text>
-        </TouchableOpacity>
-        <View style={{ width: 1, backgroundColor: border }} />
         <TouchableOpacity
           onPress={() => handleClone(item)}
           style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10 }}

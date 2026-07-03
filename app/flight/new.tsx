@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, Alert, Switch, ActivityIndicator,
@@ -6,10 +6,11 @@ import {
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Save, Plane, Cpu, MapPin, CheckCircle } from 'lucide-react-native';
+import { ArrowLeft, Save, Plane, Cpu, MapPin, CheckCircle, ClipboardList, ClipboardCheck, X as XIcon } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import { createFlight } from '../../src/db/flights';
-import { useQueryClient } from '@tanstack/react-query';
+import { getChecklists, linkExecutionsToFlight, deleteExecution } from '../../src/db/checklists';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FlightRole, FlightType } from '../../src/types';
 import { format } from 'date-fns';
 import DatePickerField, { type PickerColors } from '../../src/components/DatePickerField';
@@ -114,7 +115,9 @@ function MissionChips({ value, onChange, colors }: MissionChipsProps) {
 export default function NewFlightScreen() {
   const router        = useRouter();
   const { t }         = useTranslation();
-  const { icao }      = useLocalSearchParams<{ icao?: string }>();
+  const { icao, completedExecutionId, completedExecutionName } = useLocalSearchParams<{
+    icao?: string; completedExecutionId?: string; completedExecutionName?: string;
+  }>();
   const qc            = useQueryClient();
   const isDark        = useAppColorScheme() === 'dark';
 
@@ -174,6 +177,51 @@ export default function NewFlightScreen() {
   const [lng, setLng]               = useState<number | null>(null);
   const [locLoading, setLocLoading] = useState(false);
   const [siteFromGps, setSiteFromGps] = useState(false);
+
+  // ── Checklists ejecutados durante la creación del vuelo (PAR-9) ──
+  const [pendingExecutions, setPendingExecutions] = useState<Array<{ executionId: string; checklistName: string }>>([]);
+  const savedRef = useRef(false);
+  const pendingRef = useRef(pendingExecutions);
+  pendingRef.current = pendingExecutions;
+
+  const { data: checklistCatalog = [] } = useQuery({
+    queryKey: ['checklists'],
+    queryFn: () => getChecklists(),
+  });
+
+  // Recibe el resultado de execute.tsx cuando vuelve con returnTo
+  useEffect(() => {
+    if (!completedExecutionId) return;
+    setPendingExecutions((prev) => {
+      if (prev.some((e) => e.executionId === completedExecutionId)) return prev;
+      return [...prev, { executionId: completedExecutionId, checklistName: completedExecutionName ?? '' }];
+    });
+    router.setParams({ completedExecutionId: undefined, completedExecutionName: undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [completedExecutionId]);
+
+  // Limpia ejecuciones huérfanas (completadas pero nunca vinculadas) si el
+  // usuario sale de la pantalla sin guardar el vuelo.
+  useEffect(() => {
+    return () => {
+      if (savedRef.current) return;
+      for (const ex of pendingRef.current) {
+        deleteExecution(ex.executionId).catch(() => { /* best effort */ });
+      }
+    };
+  }, []);
+
+  const addChecklistExecution = (checklistId: string, checklistName: string) => {
+    router.push({
+      pathname: '/checklist/[id]/execute',
+      params: { id: checklistId, name: checklistName, returnTo: '/flight/new' },
+    });
+  };
+
+  const removeChecklistExecution = (executionId: string) => {
+    setPendingExecutions((prev) => prev.filter((e) => e.executionId !== executionId));
+    deleteExecution(executionId).catch(() => { /* best effort */ });
+  };
 
   // Auto-calculate total time when both block times are set and totalTime is empty
   useEffect(() => {
@@ -251,8 +299,9 @@ export default function NewFlightScreen() {
         total = Math.round((diff / 60) * 10) / 10;
       }
 
+      let flight;
       if (isUAS) {
-        await createFlight({
+        flight = await createFlight({
           date, flightType: 'uas',
           originIcao: site, destinationIcao: site,
           aircraftRegistration: droneId || undefined,
@@ -267,7 +316,7 @@ export default function NewFlightScreen() {
           notes: [droneModel ? t('flight.new.modelPrefix', { model: droneModel }) : '', notes].filter(Boolean).join('\n') || undefined,
         });
       } else {
-        await createFlight({
+        flight = await createFlight({
           date, flightType: 'manned',
           originIcao: origin.toUpperCase(), destinationIcao: dest.toUpperCase(),
           aircraftRegistration: registration || undefined,
@@ -283,8 +332,14 @@ export default function NewFlightScreen() {
         });
       }
 
+      if (pendingExecutions.length > 0) {
+        await linkExecutionsToFlight(pendingExecutions.map((e) => e.executionId), flight.id);
+      }
+      savedRef.current = true;
+
       qc.invalidateQueries({ queryKey: ['flights'] });
       qc.invalidateQueries({ queryKey: ['flight-stats'] });
+      qc.invalidateQueries({ queryKey: ['executions'] });
       router.back();
     } catch (e) {
       Alert.alert(t('common.error'), (e as Error).message);
@@ -634,6 +689,54 @@ export default function NewFlightScreen() {
             multiline numberOfLines={3}
             style={{ ...inputStyle, minHeight: 80, textAlignVertical: 'top' }}
           />
+        </Field>
+
+        {/* Checklists (PAR-9) */}
+        <Field label={t('flight.new.checklistsTitle')} subColor={sub}>
+          {pendingExecutions.length > 0 && (
+            <View style={{ gap: 8, marginBottom: 10 }}>
+              {pendingExecutions.map((ex) => (
+                <View
+                  key={ex.executionId}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 10,
+                    backgroundColor: card, borderRadius: 10, borderWidth: 1, borderColor: border,
+                    paddingHorizontal: 12, paddingVertical: 10,
+                  }}
+                >
+                  <ClipboardCheck size={16} color="#16A34A" />
+                  <Text style={{ color: text, fontSize: 14, fontWeight: '500', flex: 1 }} numberOfLines={1}>
+                    {ex.checklistName}
+                  </Text>
+                  <TouchableOpacity onPress={() => removeChecklistExecution(ex.executionId)} style={{ padding: 4 }}>
+                    <XIcon size={16} color={sub} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {checklistCatalog.length === 0 ? (
+            <Text style={{ color: sub, fontSize: 13 }}>{t('flight.new.checklistsEmpty')}</Text>
+          ) : (
+            <View style={{ gap: 8 }}>
+              {checklistCatalog.map((cl) => (
+                <TouchableOpacity
+                  key={cl.id}
+                  onPress={() => addChecklistExecution(cl.id, cl.name)}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 10,
+                    backgroundColor: card, borderRadius: 10, borderWidth: 1, borderColor: border,
+                    paddingHorizontal: 12, paddingVertical: 10,
+                  }}
+                >
+                  <ClipboardList size={16} color={accent} />
+                  <Text style={{ color: text, fontSize: 14, flex: 1 }} numberOfLines={1}>{cl.name}</Text>
+                  <Text style={{ color: accent, fontSize: 13, fontWeight: '600' }}>{t('flight.new.checklistsAdd')}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </Field>
 
       </ScrollView>
