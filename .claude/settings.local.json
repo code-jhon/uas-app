@@ -28,7 +28,10 @@
       "Bash(echo \"EXIT: $?\")",
       "Bash(node *)",
       "Bash(Get-ChildItem -Path \"e:\\\\Projects\\\\Codejhon\\\\Apps\\\\uas-flight-check\" -Force)",
-      "Bash(Select-Object Name, FullName)"
+      "Bash(Select-Object Name, FullName)",
+      "Bash(npx eslint *)",
+      "Bash(npm run *)",
+      "Bash(xargs -I{} sh -c 'echo ===={}====; cat {}')"
     ]
   }
 }

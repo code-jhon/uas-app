@@ -10,6 +10,7 @@ import { ArrowLeft, Save, Plane, Cpu, MapPin, CheckCircle, ClipboardList, Clipbo
 import * as Location from 'expo-location';
 import { createFlight } from '../../src/db/flights';
 import { getChecklists, linkExecutionsToFlight, deleteExecution } from '../../src/db/checklists';
+import { useFlightDraftStore } from '../../src/store/flightDraftStore';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FlightRole, FlightType } from '../../src/types';
 import { format } from 'date-fns';
@@ -140,43 +141,49 @@ export default function NewFlightScreen() {
   };
 
   // ── State ──
-  const [flightType, setFlightType] = useState<FlightType>('manned');
+  // Restores in-progress form values if the user left to run a checklist
+  // (PAR-9) and came back to a screen instance that ended up remounted —
+  // navigation reuse of the existing route can't always be relied on, so
+  // this draft snapshot is the guaranteed fallback. See addChecklistExecution.
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const initialDraft = useFlightDraftStore.getState().draft;
+
+  const [flightType, setFlightType] = useState<FlightType>(initialDraft?.flightType ?? 'manned');
   const isUAS = flightType === 'uas';
 
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const [date, setDate]           = useState(today);
-  const [blockOut, setBlockOut]   = useState('');
-  const [blockIn, setBlockIn]     = useState('');
-  const [totalTime, setTotalTime] = useState('');
-  const [notes, setNotes]         = useState('');
+  const [date, setDate]           = useState(initialDraft?.date ?? today);
+  const [blockOut, setBlockOut]   = useState(initialDraft?.blockOut ?? '');
+  const [blockIn, setBlockIn]     = useState(initialDraft?.blockIn ?? '');
+  const [totalTime, setTotalTime] = useState(initialDraft?.totalTime ?? '');
+  const [notes, setNotes]         = useState(initialDraft?.notes ?? '');
   const [saving, setSaving]       = useState(false);
 
   // Manned
-  const [origin, setOrigin]         = useState(icao ?? '');
-  const [dest, setDest]             = useState('');
-  const [registration, setReg]      = useState('');
-  const [aircraftType, setAcType]   = useState('');
-  const [nightTime, setNightTime]   = useState('');
-  const [ifrTime, setIfrTime]       = useState('');
-  const [picTime, setPicTime]       = useState('');
-  const [landingsDay, setLdDay]     = useState('');
-  const [landingsNight, setLdNight] = useState('');
-  const [approaches, setApproaches] = useState('');
-  const [role, setRole]             = useState<FlightRole>('PIC');
+  const [origin, setOrigin]         = useState(initialDraft?.origin ?? (icao ?? ''));
+  const [dest, setDest]             = useState(initialDraft?.dest ?? '');
+  const [registration, setReg]      = useState(initialDraft?.registration ?? '');
+  const [aircraftType, setAcType]   = useState(initialDraft?.aircraftType ?? '');
+  const [nightTime, setNightTime]   = useState(initialDraft?.nightTime ?? '');
+  const [ifrTime, setIfrTime]       = useState(initialDraft?.ifrTime ?? '');
+  const [picTime, setPicTime]       = useState(initialDraft?.picTime ?? '');
+  const [landingsDay, setLdDay]     = useState(initialDraft?.landingsDay ?? '');
+  const [landingsNight, setLdNight] = useState(initialDraft?.landingsNight ?? '');
+  const [approaches, setApproaches] = useState(initialDraft?.approaches ?? '');
+  const [role, setRole]             = useState<FlightRole>(initialDraft?.role ?? 'PIC');
 
   // UAS
-  const [site, setSite]             = useState('');
-  const [droneId, setDroneId]       = useState('');
-  const [droneModel, setDroneModel] = useState('');
-  const [vlos, setVlos]             = useState(true);
-  const [maxAlt, setMaxAlt]         = useState('');
-  const [maxDist, setMaxDist]       = useState('');
-  const [missionType, setMission]   = useState('');
-  const [uasRole, setUasRole]       = useState<FlightRole>('operador');
-  const [lat, setLat]               = useState<number | null>(null);
-  const [lng, setLng]               = useState<number | null>(null);
+  const [site, setSite]             = useState(initialDraft?.site ?? '');
+  const [droneId, setDroneId]       = useState(initialDraft?.droneId ?? '');
+  const [droneModel, setDroneModel] = useState(initialDraft?.droneModel ?? '');
+  const [vlos, setVlos]             = useState(initialDraft?.vlos ?? true);
+  const [maxAlt, setMaxAlt]         = useState(initialDraft?.maxAlt ?? '');
+  const [maxDist, setMaxDist]       = useState(initialDraft?.maxDist ?? '');
+  const [missionType, setMission]   = useState(initialDraft?.missionType ?? '');
+  const [uasRole, setUasRole]       = useState<FlightRole>(initialDraft?.uasRole ?? 'operador');
+  const [lat, setLat]               = useState<number | null>(initialDraft?.lat ?? null);
+  const [lng, setLng]               = useState<number | null>(initialDraft?.lng ?? null);
   const [locLoading, setLocLoading] = useState(false);
-  const [siteFromGps, setSiteFromGps] = useState(false);
+  const [siteFromGps, setSiteFromGps] = useState(initialDraft?.siteFromGps ?? false);
 
   // ── Checklists ejecutados durante la creación del vuelo (PAR-9) ──
   const [pendingExecutions, setPendingExecutions] = useState<Array<{ executionId: string; checklistName: string }>>([]);
@@ -200,18 +207,29 @@ export default function NewFlightScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [completedExecutionId]);
 
-  // Limpia ejecuciones huérfanas (completadas pero nunca vinculadas) si el
-  // usuario sale de la pantalla sin guardar el vuelo.
+  // Limpia ejecuciones huérfanas (completadas pero nunca vinculadas) y el
+  // borrador del formulario si el usuario sale de la pantalla sin guardar el vuelo.
   useEffect(() => {
     return () => {
       if (savedRef.current) return;
       for (const ex of pendingRef.current) {
         deleteExecution(ex.executionId).catch(() => { /* best effort */ });
       }
+      useFlightDraftStore.getState().clear();
     };
   }, []);
 
   const addChecklistExecution = (checklistId: string, checklistName: string) => {
+    // Snapshot the in-progress form so it survives the trip through the
+    // checklist screen regardless of whether the return navigation reuses
+    // this screen instance or mounts a fresh one.
+    useFlightDraftStore.getState().save({
+      flightType, date, blockOut, blockIn, totalTime, notes,
+      origin, dest, registration, aircraftType, nightTime, ifrTime, picTime,
+      landingsDay, landingsNight, approaches, role,
+      site, droneId, droneModel, vlos, maxAlt, maxDist, missionType, uasRole,
+      lat, lng, siteFromGps,
+    });
     router.push({
       pathname: '/checklist/[id]/execute',
       params: { id: checklistId, name: checklistName, returnTo: '/flight/new' },
@@ -336,6 +354,7 @@ export default function NewFlightScreen() {
         await linkExecutionsToFlight(pendingExecutions.map((e) => e.executionId), flight.id);
       }
       savedRef.current = true;
+      useFlightDraftStore.getState().clear();
 
       qc.invalidateQueries({ queryKey: ['flights'] });
       qc.invalidateQueries({ queryKey: ['flight-stats'] });

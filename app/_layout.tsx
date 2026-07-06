@@ -41,6 +41,13 @@ export default function RootLayout() {
         <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="flight-conditions" options={{ headerShown: false }} />
+          {/* Se ejecuta únicamente desde app/flight/new.tsx (PAR-9); como modal, la
+              pantalla que lo presenta nunca se desmonta, así que su estado sobrevive
+              siempre al ir y volver del checklist. */}
+          <Stack.Screen
+            name="checklist/[id]/execute"
+            options={{ presentation: 'modal', headerShown: false, gestureEnabled: false }}
+          />
         </Stack>
       </QueryClientProvider>
     </GestureHandlerRootView>
