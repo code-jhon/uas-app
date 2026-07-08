@@ -7,6 +7,7 @@ import { Flight, FlightRole, FlightType, ChecklistExecution } from '../types';
 import { randomUUID } from './uuid';
 import i18n from '../i18n';
 import { getDateLocale } from '../i18n/dateLocale';
+import { getChecklistById } from '../db/checklists';
 
 const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, opts) as string;
 
@@ -194,7 +195,40 @@ function htmlEscape(s: string): string {
     .replace(/>/g, '&gt;');
 }
 
-function buildChecklistAnnexHtml(flights: Flight[], executionsByFlight: Record<string, ChecklistExecution[]>): string {
+/**
+ * Resolves the checklists involved in `executionsByFlight` and builds a
+ * `checklist_item.id -> title` map, so exports can show the readable item
+ * name instead of its UUID (PAR-10). Mirrors the pattern already used by
+ * `ChecklistExecutionCard` in `app/flight/[id].tsx`.
+ */
+async function buildChecklistItemTitles(
+  executionsByFlight: Record<string, ChecklistExecution[]>,
+): Promise<Map<string, string>> {
+  const checklistIds = new Set<string>();
+  for (const executions of Object.values(executionsByFlight)) {
+    for (const ex of executions) checklistIds.add(ex.checklistId);
+  }
+
+  const itemTitleById = new Map<string, string>();
+  await Promise.all(
+    Array.from(checklistIds).map(async (checklistId) => {
+      const checklist = await getChecklistById(checklistId);
+      if (!checklist) return; // Checklist was deleted; caller falls back to itemId.
+      for (const section of checklist.sections) {
+        for (const item of section.items) {
+          itemTitleById.set(item.id, item.title);
+        }
+      }
+    }),
+  );
+  return itemTitleById;
+}
+
+function buildChecklistAnnexHtml(
+  flights: Flight[],
+  executionsByFlight: Record<string, ChecklistExecution[]>,
+  itemTitleById: Map<string, string>,
+): string {
   const flightsWithChecklists = flights.filter((f) => (executionsByFlight[f.id]?.length ?? 0) > 0);
   if (flightsWithChecklists.length === 0) return '';
 
@@ -210,7 +244,8 @@ function buildChecklistAnnexHtml(flights: Flight[], executionsByFlight: Record<s
           const items = ex.results
             .map((r) => {
               const note = r.status === 'skipped' && r.note ? ` — ${htmlEscape(r.note)}` : '';
-              return `<li><span class="badge st-${r.status}">${STATUS_LABEL[r.status] ?? r.status}</span> ${htmlEscape(r.itemId)}${note}</li>`;
+              const itemLabel = itemTitleById.get(r.itemId) ?? r.itemId;
+              return `<li><span class="badge st-${r.status}">${STATUS_LABEL[r.status] ?? r.status}</span> ${htmlEscape(itemLabel)}${note}</li>`;
             })
             .join('');
           return `<div class="checklist-exec"><div class="exec-title">${htmlEscape(ex.checklistName)}</div><ul>${items}</ul></div>`;
@@ -236,7 +271,8 @@ function buildChecklistAnnexHtml(flights: Flight[], executionsByFlight: Record<s
   ${sections}`;
 }
 
-function buildHtml(flights: Flight[], executionsByFlight: Record<string, ChecklistExecution[]> = {}): string {
+async function buildHtml(flights: Flight[], executionsByFlight: Record<string, ChecklistExecution[]> = {}): Promise<string> {
+  const itemTitleById = await buildChecklistItemTitles(executionsByFlight);
   const totalHours = flights.reduce((s, f) => s + (f.totalTime ?? 0), 0);
   const manned = flights.filter((f) => f.flightType !== 'uas').length;
   const uas = flights.filter((f) => f.flightType === 'uas').length;
@@ -303,7 +339,7 @@ function buildHtml(flights: Flight[], executionsByFlight: Record<string, Checkli
     <tbody>${rows}</tbody>
   </table>
   <div class="footer">${t('doc.pdfFooter', { count: flights.length })}</div>
-  ${buildChecklistAnnexHtml(flights, executionsByFlight)}
+  ${buildChecklistAnnexHtml(flights, executionsByFlight, itemTitleById)}
 </body>
 </html>`;
 }
@@ -338,7 +374,8 @@ export async function exportFlights(
   }
 
   // PDF
-  const { uri } = await Print.printToFileAsync({ html: buildHtml(flights, executionsByFlight) });
+  const html = await buildHtml(flights, executionsByFlight);
+  const { uri } = await Print.printToFileAsync({ html });
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(uri, {
       mimeType: 'application/pdf',
