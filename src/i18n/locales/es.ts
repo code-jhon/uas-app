@@ -274,7 +274,6 @@ const es = {
       mine: 'Mis checklists',
       empty: 'No hay checklists aún',
       template: 'PLANTILLA',
-      execute: 'Ejecutar',
       clone: 'Clonar',
       delete: 'Eliminar',
       itemsSections: '{{items}} ítems · {{sections}} secciones',
@@ -301,7 +300,6 @@ const es = {
       noItemsMsg: 'Agrega al menos un ítem al checklist.',
     },
     detail: {
-      execute: 'Ejecutar',
       itemsSections: '{{items}} ítems · {{sections}} secciones',
       required: 'Requerido',
     },
