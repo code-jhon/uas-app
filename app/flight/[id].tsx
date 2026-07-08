@@ -10,9 +10,11 @@ import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Plane, Cpu, MapPin, ExternalLink,
   Navigation, Globe, BookOpen, ImageOff, ShoppingCart,
+  CheckCircle2, MinusCircle, SkipForward, Circle,
 } from 'lucide-react-native';
 import { getFlightById } from '../../src/db/flights';
-import { getExecutions } from '../../src/db/checklists';
+import { getExecutions, getChecklistById } from '../../src/db/checklists';
+import { ChecklistExecution, ItemStatus } from '../../src/types';
 import { COLOMBIA_AIRPORTS } from '../../src/data/airports';
 import {
   extractDroneModel, fetchDroneImage,
@@ -305,6 +307,76 @@ function DroneModelCard({ model, C }: { model: string; C: DroneCardColors }) {
           </TouchableOpacity>
         ))}
       </View>
+    </View>
+  );
+}
+
+// ─── Checklist execution detail card (PAR-9) ──────────────────────────────────
+
+interface ChecklistExecColors {
+  card: string; border: string; text: string; sub: string;
+}
+
+function statusIcon(status: ItemStatus | undefined, color: string, na: string) {
+  if (status === 'ok') return <CheckCircle2 size={15} color="#22c55e" />;
+  if (status === 'na') return <MinusCircle size={15} color={na} />;
+  if (status === 'skipped') return <SkipForward size={15} color="#eab308" />;
+  return <Circle size={15} color={color} />;
+}
+
+function ChecklistExecutionCard({ execution, C }: { execution: ChecklistExecution; C: ChecklistExecColors }) {
+  const { t } = useTranslation();
+  const { data: checklist } = useQuery({
+    queryKey: ['checklist', execution.checklistId],
+    queryFn: () => getChecklistById(execution.checklistId),
+  });
+
+  const resultByItem = new Map(execution.results.map((r) => [r.itemId, r]));
+  const doneOk = execution.results.filter((r) => r.status === 'ok').length;
+
+  return (
+    <View style={{ backgroundColor: C.card, borderRadius: 12, borderWidth: 1, borderColor: C.border, overflow: 'hidden' }}>
+      <View style={{ padding: 14 }}>
+        <Text style={{ color: C.text, fontWeight: '600', fontSize: 14 }}>
+          {execution.checklistName}
+        </Text>
+        <Text style={{ color: C.sub, fontSize: 12, marginTop: 4 }}>
+          {t('flight.detail.itemsCompleted', { done: doneOk, total: execution.results.length })}
+        </Text>
+        {execution.completedAt && (
+          <Text style={{ color: C.sub, fontSize: 12, marginTop: 2 }}>
+            {t('flight.detail.completedAt', { date: new Date(execution.completedAt).toLocaleString(getNumberLocaleTag()) })}
+          </Text>
+        )}
+      </View>
+
+      {checklist && (
+        <View style={{ borderTopWidth: 1, borderTopColor: C.border, padding: 14, gap: 12 }}>
+          {checklist.sections.map((sec) => (
+            <View key={sec.id} style={{ gap: 6 }}>
+              <Text style={{ color: C.sub, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                {sec.title}
+              </Text>
+              {sec.items.map((item) => {
+                const result = resultByItem.get(item.id);
+                return (
+                  <View key={item.id} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                    {statusIcon(result?.status, C.sub, C.sub)}
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: C.text, fontSize: 13 }}>{item.title}</Text>
+                      {result?.status === 'skipped' && result?.note && (
+                        <Text style={{ color: '#eab308', fontSize: 11, marginTop: 2 }}>
+                          {t('checklists.execute.reason', { note: result.note })}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -646,22 +718,7 @@ export default function FlightDetailScreen() {
               {t('flight.detail.linkedChecklists')}
             </Text>
             {executions.map((ex) => (
-              <View key={ex.id} style={{
-                backgroundColor: card, borderRadius: 12,
-                padding: 14, borderWidth: 1, borderColor: border,
-              }}>
-                <Text style={{ color: text, fontWeight: '600', fontSize: 14 }}>
-                  {ex.checklistName}
-                </Text>
-                <Text style={{ color: sub, fontSize: 12, marginTop: 4 }}>
-                  {t('flight.detail.itemsCompleted', { done: ex.results.filter(r => r.status === 'ok').length, total: ex.results.length })}
-                </Text>
-                {ex.completedAt && (
-                  <Text style={{ color: sub, fontSize: 12, marginTop: 2 }}>
-                    {t('flight.detail.completedAt', { date: new Date(ex.completedAt).toLocaleString(getNumberLocaleTag()) })}
-                  </Text>
-                )}
-              </View>
+              <ChecklistExecutionCard key={ex.id} execution={ex} C={{ card, border, text, sub }} />
             ))}
           </View>
         )}

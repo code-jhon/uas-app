@@ -3,7 +3,7 @@ import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
 import * as DocumentPicker from 'expo-document-picker';
 import { format, parseISO } from 'date-fns';
-import { Flight, FlightRole, FlightType } from '../types';
+import { Flight, FlightRole, FlightType, ChecklistExecution } from '../types';
 import { randomUUID } from './uuid';
 import i18n from '../i18n';
 import { getDateLocale } from '../i18n/dateLocale';
@@ -85,9 +85,37 @@ async function writeAndShare(
   }
 }
 
+// ─── Checklist summary (shared by CSV/JSON) ────────────────────────────────
+// Not part of the domain `Flight` type — kept separate to avoid polluting it.
+
+type FlightExport = Flight & { checklistExecutions?: ChecklistExecution[] };
+
+interface ChecklistSummary {
+  count: number;
+  ok: number;
+  na: number;
+  skipped: number;
+}
+
+function summarizeExecutions(executions: ChecklistExecution[] | undefined): ChecklistSummary {
+  const summary: ChecklistSummary = { count: executions?.length ?? 0, ok: 0, na: 0, skipped: 0 };
+  for (const ex of executions ?? []) {
+    for (const r of ex.results) {
+      if (r.status === 'ok') summary.ok++;
+      else if (r.status === 'na') summary.na++;
+      else if (r.status === 'skipped') summary.skipped++;
+    }
+  }
+  return summary;
+}
+
 // ─── JSON ─────────────────────────────────────────────────────────────────
 
-function buildJson(flights: Flight[]): string {
+function buildJson(flights: Flight[], executionsByFlight: Record<string, ChecklistExecution[]>): string {
+  const flightsOut: FlightExport[] = flights.map((f) => {
+    const executions = executionsByFlight[f.id];
+    return executions && executions.length > 0 ? { ...f, checklistExecutions: executions } : f;
+  });
   return JSON.stringify(
     {
       app: 'PilotLog',
@@ -95,7 +123,7 @@ function buildJson(flights: Flight[]): string {
       version: 1,
       exportedAt: new Date().toISOString(),
       count: flights.length,
-      flights,
+      flights: flightsOut,
     },
     null,
     2,
@@ -119,11 +147,18 @@ function cellToString(f: Flight, def: FieldDef): string {
   return String(v);
 }
 
-function buildCsv(flights: Flight[]): string {
-  const header = FIELDS.map((d) => d.header).join(',');
-  const rows = flights.map((f) =>
-    FIELDS.map((d) => csvEscape(cellToString(f, d))).join(','),
-  );
+const CHECKLIST_SUMMARY_HEADERS = ['checklists_ejecutados', 'items_ok', 'items_na', 'items_omitidos'];
+
+function buildCsv(flights: Flight[], executionsByFlight: Record<string, ChecklistExecution[]>): string {
+  const header = [...FIELDS.map((d) => d.header), ...CHECKLIST_SUMMARY_HEADERS].join(',');
+  const rows = flights.map((f) => {
+    const summary = summarizeExecutions(executionsByFlight[f.id]);
+    const cells = [
+      ...FIELDS.map((d) => csvEscape(cellToString(f, d))),
+      String(summary.count), String(summary.ok), String(summary.na), String(summary.skipped),
+    ];
+    return cells.join(',');
+  });
   // Prepend BOM so Excel opens UTF-8 correctly.
   return '﻿' + [header, ...rows].join('\r\n');
 }
@@ -159,7 +194,49 @@ function htmlEscape(s: string): string {
     .replace(/>/g, '&gt;');
 }
 
-function buildHtml(flights: Flight[]): string {
+function buildChecklistAnnexHtml(flights: Flight[], executionsByFlight: Record<string, ChecklistExecution[]>): string {
+  const flightsWithChecklists = flights.filter((f) => (executionsByFlight[f.id]?.length ?? 0) > 0);
+  if (flightsWithChecklists.length === 0) return '';
+
+  const STATUS_LABEL: Record<string, string> = { ok: 'OK', na: 'N/A', skipped: t('doc.checklistSkipped'), pending: '—' };
+
+  const sections = flightsWithChecklists
+    .map((f) => {
+      const isUAS = f.flightType === 'uas';
+      const label = isUAS ? htmlEscape(f.site ?? 'UAS') : `${htmlEscape(f.originIcao)} → ${htmlEscape(f.destinationIcao)}`;
+      const executions = executionsByFlight[f.id] ?? [];
+      const execBlocks = executions
+        .map((ex) => {
+          const items = ex.results
+            .map((r) => {
+              const note = r.status === 'skipped' && r.note ? ` — ${htmlEscape(r.note)}` : '';
+              return `<li><span class="badge st-${r.status}">${STATUS_LABEL[r.status] ?? r.status}</span> ${htmlEscape(r.itemId)}${note}</li>`;
+            })
+            .join('');
+          return `<div class="checklist-exec"><div class="exec-title">${htmlEscape(ex.checklistName)}</div><ul>${items}</ul></div>`;
+        })
+        .join('');
+      return `<div class="flight-annex"><div class="flight-annex-title">${fmtDate(f.date)} · ${label}</div>${execBlocks}</div>`;
+    })
+    .join('');
+
+  return `
+  <h2>${t('doc.checklistAnnexTitle')}</h2>
+  <style>
+    .flight-annex { margin-bottom: 16px; }
+    .flight-annex-title { font-weight: 700; font-size: 13px; margin-bottom: 6px; }
+    .checklist-exec { margin-bottom: 8px; padding-left: 10px; }
+    .exec-title { font-weight: 600; font-size: 12px; margin-bottom: 4px; }
+    .checklist-exec ul { margin: 0; padding-left: 16px; font-size: 11px; }
+    .checklist-exec li { margin-bottom: 2px; }
+    .badge.st-ok { color: #16A34A; font-weight: 700; }
+    .badge.st-na { color: #536471; font-weight: 700; }
+    .badge.st-skipped { color: #CA8A04; font-weight: 700; }
+  </style>
+  ${sections}`;
+}
+
+function buildHtml(flights: Flight[], executionsByFlight: Record<string, ChecklistExecution[]> = {}): string {
   const totalHours = flights.reduce((s, f) => s + (f.totalTime ?? 0), 0);
   const manned = flights.filter((f) => f.flightType !== 'uas').length;
   const uas = flights.filter((f) => f.flightType === 'uas').length;
@@ -226,6 +303,7 @@ function buildHtml(flights: Flight[]): string {
     <tbody>${rows}</tbody>
   </table>
   <div class="footer">${t('doc.pdfFooter', { count: flights.length })}</div>
+  ${buildChecklistAnnexHtml(flights, executionsByFlight)}
 </body>
 </html>`;
 }
@@ -235,13 +313,14 @@ function buildHtml(flights: Flight[]): string {
 export async function exportFlights(
   flights: Flight[],
   fmt: ExportFormat,
+  executionsByFlight: Record<string, ChecklistExecution[]> = {},
 ): Promise<void> {
   const stamp = timestampName();
 
   if (fmt === 'json') {
     await writeAndShare(
       `bitacora_${stamp}.json`,
-      buildJson(flights),
+      buildJson(flights, executionsByFlight),
       'application/json',
       t('doc.dialogJson'),
     );
@@ -251,7 +330,7 @@ export async function exportFlights(
   if (fmt === 'csv') {
     await writeAndShare(
       `bitacora_${stamp}.csv`,
-      buildCsv(flights),
+      buildCsv(flights, executionsByFlight),
       'text/csv',
       t('doc.dialogCsv'),
     );
@@ -259,7 +338,7 @@ export async function exportFlights(
   }
 
   // PDF
-  const { uri } = await Print.printToFileAsync({ html: buildHtml(flights) });
+  const { uri } = await Print.printToFileAsync({ html: buildHtml(flights, executionsByFlight) });
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(uri, {
       mimeType: 'application/pdf',

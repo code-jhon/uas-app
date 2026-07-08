@@ -1,6 +1,7 @@
 import { getDatabase } from './database';
 import { Flight, FlightRole } from '../types';
 import { randomUUID } from '../utils/uuid';
+import { deleteExecutionsByFlight } from './checklists';
 
 function rowToFlight(row: Record<string, unknown>): Flight {
   return {
@@ -147,6 +148,9 @@ export async function updateFlight(id: string, data: Partial<Omit<Flight, 'id' |
 
 export async function deleteFlight(id: string): Promise<void> {
   const db = await getDatabase();
+  // Remove linked checklist executions/results first (PAR-9); the source
+  // checklist in the catalog is never touched by this call.
+  await deleteExecutionsByFlight(id);
   await db.runAsync(`DELETE FROM flight WHERE id = ?`, [id]);
 }
 

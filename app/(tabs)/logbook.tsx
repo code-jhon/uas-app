@@ -13,6 +13,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { getFlights, deleteFlight, getFlightStats, importFlights } from '../../src/db/flights';
+import { getExecutionsForFlights } from '../../src/db/checklists';
 import { exportFlights, pickAndParseFlights, ExportFormat } from '../../src/utils/flightIO';
 import { getDateLocale } from '../../src/i18n/dateLocale';
 import { Flight } from '../../src/types';
@@ -255,7 +256,8 @@ export default function LogbookScreen() {
     }
     setBusy(fmt);
     try {
-      await exportFlights(flights, fmt);
+      const executionsByFlight = await getExecutionsForFlights(flights.map((f) => f.id));
+      await exportFlights(flights, fmt, executionsByFlight);
       setIoOpen(false);
     } catch (e) {
       Alert.alert(t('logbook.io.exportError'), (e as Error).message);

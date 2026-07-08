@@ -408,6 +408,9 @@ const pt: Resources = {
       missingDate: 'Preencha a data.',
       missingRoute: 'Preencha os aeroportos de origem e destino.',
       missingSite: 'Informe a zona / local de operação.',
+      checklistsTitle: 'Checklists',
+      checklistsEmpty: 'Nenhum checklist disponível. Crie um na seção "Checklists".',
+      checklistsAdd: 'Adicionar',
     },
     detail: {
       uasTitle: 'Voo UAS',
@@ -525,6 +528,8 @@ const pt: Resources = {
     pdfFooter: 'PilotLog · {{count}} registro(s) exportado(s)',
     errJsonNoList: 'O arquivo JSON não contém uma lista de voos.',
     errCsvNoData: 'O arquivo CSV não contém dados.',
+    checklistAnnexTitle: 'Anexo — Checklists executados',
+    checklistSkipped: 'Omitido',
   },
 
   auth: {

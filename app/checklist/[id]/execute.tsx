@@ -11,7 +11,7 @@ import { getChecklistById, startExecution, saveItemResult, completeExecution } f
 import { ChecklistItem, ItemStatus } from '../../../src/types';
 
 export default function ExecuteChecklistScreen() {
-  const { id, name } = useLocalSearchParams<{ id: string; name: string }>();
+  const { id, name, returnTo } = useLocalSearchParams<{ id: string; name: string; returnTo?: string }>();
   const router = useRouter();
   const { t } = useTranslation();
   const qc = useQueryClient();
@@ -62,6 +62,15 @@ export default function ExecuteChecklistScreen() {
     await saveItemResult({ executionId, itemId: item.id, status, note });
   }, [executionId]);
 
+  // Auto-advance to the next section when the last item of the current page gets a status.
+  const advanceIfLastItem = useCallback((item: ChecklistItem) => {
+    const items = currentSection?.items ?? [];
+    const isLastItem = items.length > 0 && items[items.length - 1].id === item.id;
+    if (isLastItem && sectionIdx < sections.length - 1) {
+      setSectionIdx((i) => i + 1);
+    }
+  }, [currentSection, sectionIdx, sections.length]);
+
   const handleSkip = (item: ChecklistItem) => {
     setSkipModal({ item });
     setSkipReason('');
@@ -70,6 +79,7 @@ export default function ExecuteChecklistScreen() {
   const confirmSkip = () => {
     if (skipModal) {
       setResult(skipModal.item, 'skipped', skipReason || t('checklists.execute.skipReasonNone'));
+      advanceIfLastItem(skipModal.item);
       setSkipModal(null);
     }
   };
@@ -95,7 +105,17 @@ export default function ExecuteChecklistScreen() {
     try {
       await completeExecution(executionId);
       qc.invalidateQueries({ queryKey: ['executions'] });
-      router.back();
+      if (returnTo) {
+        // `dismissTo` pops the stack back down to the existing screen instead
+        // of pushing/mounting a new one on top — `replace` was resetting all
+        // in-progress flight form state because it mounted a fresh /flight/new
+        // screen rather than returning to the one the user was filling in.
+        // (The form itself also snapshots/restores a draft as a safety net —
+        // see useFlightDraftStore — in case that screen isn't in the stack.)
+        router.dismissTo({ pathname: returnTo as never, params: { completedExecutionId: executionId, completedExecutionName: checklist?.name ?? name ?? '' } });
+      } else {
+        router.back();
+      }
     } catch (e) {
       Alert.alert(t('common.error'), (e as Error).message);
     } finally {
@@ -208,7 +228,7 @@ export default function ExecuteChecklistScreen() {
                   active={status === 'ok'}
                   activeColor="#22c55e"
                   icon={<CheckCircle2 size={14} color={status === 'ok' ? '#fff' : '#22c55e'} />}
-                  onPress={() => setResult(item, 'ok')}
+                  onPress={() => { setResult(item, 'ok'); advanceIfLastItem(item); }}
                   isDark={isDark}
                 />
                 <ActionBtn
@@ -216,7 +236,7 @@ export default function ExecuteChecklistScreen() {
                   active={status === 'na'}
                   activeColor="#64748b"
                   icon={<MinusCircle size={14} color={status === 'na' ? '#fff' : sub} />}
-                  onPress={() => setResult(item, 'na')}
+                  onPress={() => { setResult(item, 'na'); advanceIfLastItem(item); }}
                   isDark={isDark}
                 />
                 <ActionBtn

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, Alert, Switch, ActivityIndicator,
@@ -6,10 +6,12 @@ import {
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Save, Plane, Cpu, MapPin, CheckCircle } from 'lucide-react-native';
+import { ArrowLeft, Save, Plane, Cpu, MapPin, CheckCircle, ClipboardList, ClipboardCheck, X as XIcon } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import { createFlight } from '../../src/db/flights';
-import { useQueryClient } from '@tanstack/react-query';
+import { getChecklists, linkExecutionsToFlight, deleteExecution } from '../../src/db/checklists';
+import { useFlightDraftStore } from '../../src/store/flightDraftStore';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FlightRole, FlightType } from '../../src/types';
 import { format } from 'date-fns';
 import DatePickerField, { type PickerColors } from '../../src/components/DatePickerField';
@@ -114,7 +116,9 @@ function MissionChips({ value, onChange, colors }: MissionChipsProps) {
 export default function NewFlightScreen() {
   const router        = useRouter();
   const { t }         = useTranslation();
-  const { icao }      = useLocalSearchParams<{ icao?: string }>();
+  const { icao, completedExecutionId, completedExecutionName } = useLocalSearchParams<{
+    icao?: string; completedExecutionId?: string; completedExecutionName?: string;
+  }>();
   const qc            = useQueryClient();
   const isDark        = useAppColorScheme() === 'dark';
 
@@ -137,43 +141,105 @@ export default function NewFlightScreen() {
   };
 
   // ── State ──
-  const [flightType, setFlightType] = useState<FlightType>('manned');
+  // Restores in-progress form values if the user left to run a checklist
+  // (PAR-9) and came back to a screen instance that ended up remounted —
+  // navigation reuse of the existing route can't always be relied on, so
+  // this draft snapshot is the guaranteed fallback. See addChecklistExecution.
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const initialDraft = useFlightDraftStore.getState().draft;
+
+  const [flightType, setFlightType] = useState<FlightType>(initialDraft?.flightType ?? 'manned');
   const isUAS = flightType === 'uas';
 
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const [date, setDate]           = useState(today);
-  const [blockOut, setBlockOut]   = useState('');
-  const [blockIn, setBlockIn]     = useState('');
-  const [totalTime, setTotalTime] = useState('');
-  const [notes, setNotes]         = useState('');
+  const [date, setDate]           = useState(initialDraft?.date ?? today);
+  const [blockOut, setBlockOut]   = useState(initialDraft?.blockOut ?? '');
+  const [blockIn, setBlockIn]     = useState(initialDraft?.blockIn ?? '');
+  const [totalTime, setTotalTime] = useState(initialDraft?.totalTime ?? '');
+  const [notes, setNotes]         = useState(initialDraft?.notes ?? '');
   const [saving, setSaving]       = useState(false);
 
   // Manned
-  const [origin, setOrigin]         = useState(icao ?? '');
-  const [dest, setDest]             = useState('');
-  const [registration, setReg]      = useState('');
-  const [aircraftType, setAcType]   = useState('');
-  const [nightTime, setNightTime]   = useState('');
-  const [ifrTime, setIfrTime]       = useState('');
-  const [picTime, setPicTime]       = useState('');
-  const [landingsDay, setLdDay]     = useState('');
-  const [landingsNight, setLdNight] = useState('');
-  const [approaches, setApproaches] = useState('');
-  const [role, setRole]             = useState<FlightRole>('PIC');
+  const [origin, setOrigin]         = useState(initialDraft?.origin ?? (icao ?? ''));
+  const [dest, setDest]             = useState(initialDraft?.dest ?? '');
+  const [registration, setReg]      = useState(initialDraft?.registration ?? '');
+  const [aircraftType, setAcType]   = useState(initialDraft?.aircraftType ?? '');
+  const [nightTime, setNightTime]   = useState(initialDraft?.nightTime ?? '');
+  const [ifrTime, setIfrTime]       = useState(initialDraft?.ifrTime ?? '');
+  const [picTime, setPicTime]       = useState(initialDraft?.picTime ?? '');
+  const [landingsDay, setLdDay]     = useState(initialDraft?.landingsDay ?? '');
+  const [landingsNight, setLdNight] = useState(initialDraft?.landingsNight ?? '');
+  const [approaches, setApproaches] = useState(initialDraft?.approaches ?? '');
+  const [role, setRole]             = useState<FlightRole>(initialDraft?.role ?? 'PIC');
 
   // UAS
-  const [site, setSite]             = useState('');
-  const [droneId, setDroneId]       = useState('');
-  const [droneModel, setDroneModel] = useState('');
-  const [vlos, setVlos]             = useState(true);
-  const [maxAlt, setMaxAlt]         = useState('');
-  const [maxDist, setMaxDist]       = useState('');
-  const [missionType, setMission]   = useState('');
-  const [uasRole, setUasRole]       = useState<FlightRole>('operador');
-  const [lat, setLat]               = useState<number | null>(null);
-  const [lng, setLng]               = useState<number | null>(null);
+  const [site, setSite]             = useState(initialDraft?.site ?? '');
+  const [droneId, setDroneId]       = useState(initialDraft?.droneId ?? '');
+  const [droneModel, setDroneModel] = useState(initialDraft?.droneModel ?? '');
+  const [vlos, setVlos]             = useState(initialDraft?.vlos ?? true);
+  const [maxAlt, setMaxAlt]         = useState(initialDraft?.maxAlt ?? '');
+  const [maxDist, setMaxDist]       = useState(initialDraft?.maxDist ?? '');
+  const [missionType, setMission]   = useState(initialDraft?.missionType ?? '');
+  const [uasRole, setUasRole]       = useState<FlightRole>(initialDraft?.uasRole ?? 'operador');
+  const [lat, setLat]               = useState<number | null>(initialDraft?.lat ?? null);
+  const [lng, setLng]               = useState<number | null>(initialDraft?.lng ?? null);
   const [locLoading, setLocLoading] = useState(false);
-  const [siteFromGps, setSiteFromGps] = useState(false);
+  const [siteFromGps, setSiteFromGps] = useState(initialDraft?.siteFromGps ?? false);
+
+  // ── Checklists ejecutados durante la creación del vuelo (PAR-9) ──
+  const [pendingExecutions, setPendingExecutions] = useState<Array<{ executionId: string; checklistName: string }>>([]);
+  const savedRef = useRef(false);
+  const pendingRef = useRef(pendingExecutions);
+  pendingRef.current = pendingExecutions;
+
+  const { data: checklistCatalog = [] } = useQuery({
+    queryKey: ['checklists'],
+    queryFn: () => getChecklists(),
+  });
+
+  // Recibe el resultado de execute.tsx cuando vuelve con returnTo
+  useEffect(() => {
+    if (!completedExecutionId) return;
+    setPendingExecutions((prev) => {
+      if (prev.some((e) => e.executionId === completedExecutionId)) return prev;
+      return [...prev, { executionId: completedExecutionId, checklistName: completedExecutionName ?? '' }];
+    });
+    router.setParams({ completedExecutionId: undefined, completedExecutionName: undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [completedExecutionId]);
+
+  // Limpia ejecuciones huérfanas (completadas pero nunca vinculadas) y el
+  // borrador del formulario si el usuario sale de la pantalla sin guardar el vuelo.
+  useEffect(() => {
+    return () => {
+      if (savedRef.current) return;
+      for (const ex of pendingRef.current) {
+        deleteExecution(ex.executionId).catch(() => { /* best effort */ });
+      }
+      useFlightDraftStore.getState().clear();
+    };
+  }, []);
+
+  const addChecklistExecution = (checklistId: string, checklistName: string) => {
+    // Snapshot the in-progress form so it survives the trip through the
+    // checklist screen regardless of whether the return navigation reuses
+    // this screen instance or mounts a fresh one.
+    useFlightDraftStore.getState().save({
+      flightType, date, blockOut, blockIn, totalTime, notes,
+      origin, dest, registration, aircraftType, nightTime, ifrTime, picTime,
+      landingsDay, landingsNight, approaches, role,
+      site, droneId, droneModel, vlos, maxAlt, maxDist, missionType, uasRole,
+      lat, lng, siteFromGps,
+    });
+    router.push({
+      pathname: '/checklist/[id]/execute',
+      params: { id: checklistId, name: checklistName, returnTo: '/flight/new' },
+    });
+  };
+
+  const removeChecklistExecution = (executionId: string) => {
+    setPendingExecutions((prev) => prev.filter((e) => e.executionId !== executionId));
+    deleteExecution(executionId).catch(() => { /* best effort */ });
+  };
 
   // Auto-calculate total time when both block times are set and totalTime is empty
   useEffect(() => {
@@ -251,8 +317,9 @@ export default function NewFlightScreen() {
         total = Math.round((diff / 60) * 10) / 10;
       }
 
+      let flight;
       if (isUAS) {
-        await createFlight({
+        flight = await createFlight({
           date, flightType: 'uas',
           originIcao: site, destinationIcao: site,
           aircraftRegistration: droneId || undefined,
@@ -267,7 +334,7 @@ export default function NewFlightScreen() {
           notes: [droneModel ? t('flight.new.modelPrefix', { model: droneModel }) : '', notes].filter(Boolean).join('\n') || undefined,
         });
       } else {
-        await createFlight({
+        flight = await createFlight({
           date, flightType: 'manned',
           originIcao: origin.toUpperCase(), destinationIcao: dest.toUpperCase(),
           aircraftRegistration: registration || undefined,
@@ -283,8 +350,15 @@ export default function NewFlightScreen() {
         });
       }
 
+      if (pendingExecutions.length > 0) {
+        await linkExecutionsToFlight(pendingExecutions.map((e) => e.executionId), flight.id);
+      }
+      savedRef.current = true;
+      useFlightDraftStore.getState().clear();
+
       qc.invalidateQueries({ queryKey: ['flights'] });
       qc.invalidateQueries({ queryKey: ['flight-stats'] });
+      qc.invalidateQueries({ queryKey: ['executions'] });
       router.back();
     } catch (e) {
       Alert.alert(t('common.error'), (e as Error).message);
@@ -634,6 +708,54 @@ export default function NewFlightScreen() {
             multiline numberOfLines={3}
             style={{ ...inputStyle, minHeight: 80, textAlignVertical: 'top' }}
           />
+        </Field>
+
+        {/* Checklists (PAR-9) */}
+        <Field label={t('flight.new.checklistsTitle')} subColor={sub}>
+          {pendingExecutions.length > 0 && (
+            <View style={{ gap: 8, marginBottom: 10 }}>
+              {pendingExecutions.map((ex) => (
+                <View
+                  key={ex.executionId}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 10,
+                    backgroundColor: card, borderRadius: 10, borderWidth: 1, borderColor: border,
+                    paddingHorizontal: 12, paddingVertical: 10,
+                  }}
+                >
+                  <ClipboardCheck size={16} color="#16A34A" />
+                  <Text style={{ color: text, fontSize: 14, fontWeight: '500', flex: 1 }} numberOfLines={1}>
+                    {ex.checklistName}
+                  </Text>
+                  <TouchableOpacity onPress={() => removeChecklistExecution(ex.executionId)} style={{ padding: 4 }}>
+                    <XIcon size={16} color={sub} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {checklistCatalog.length === 0 ? (
+            <Text style={{ color: sub, fontSize: 13 }}>{t('flight.new.checklistsEmpty')}</Text>
+          ) : (
+            <View style={{ gap: 8 }}>
+              {checklistCatalog.map((cl) => (
+                <TouchableOpacity
+                  key={cl.id}
+                  onPress={() => addChecklistExecution(cl.id, cl.name)}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 10,
+                    backgroundColor: card, borderRadius: 10, borderWidth: 1, borderColor: border,
+                    paddingHorizontal: 12, paddingVertical: 10,
+                  }}
+                >
+                  <ClipboardList size={16} color={accent} />
+                  <Text style={{ color: text, fontSize: 14, flex: 1 }} numberOfLines={1}>{cl.name}</Text>
+                  <Text style={{ color: accent, fontSize: 13, fontWeight: '600' }}>{t('flight.new.checklistsAdd')}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </Field>
 
       </ScrollView>

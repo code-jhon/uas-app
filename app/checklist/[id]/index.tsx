@@ -4,7 +4,7 @@ import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Play, CheckSquare } from 'lucide-react-native';
+import { ArrowLeft, CheckSquare } from 'lucide-react-native';
 import { getChecklistById } from '../../../src/db/checklists';
 
 export default function ChecklistDetailScreen() {
@@ -40,13 +40,6 @@ export default function ChecklistDetailScreen() {
           <Text style={{ color: text, fontSize: 18, fontWeight: '700' }} numberOfLines={2}>{checklist.name}</Text>
           <Text style={{ color: sub, fontSize: 12 }}>{t('checklists.detail.itemsSections', { items: totalItems, sections: checklist.sections.length })}</Text>
         </View>
-        <TouchableOpacity
-          onPress={() => router.push({ pathname: '/checklist/[id]/execute', params: { id: checklist.id, name: checklist.name } })}
-          style={{ backgroundColor: '#0284c7', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, flexDirection: 'row', gap: 6, alignItems: 'center' }}
-        >
-          <Play size={14} color="#fff" />
-          <Text style={{ color: '#fff', fontWeight: '600' }}>{t('checklists.detail.execute')}</Text>
-        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}>
