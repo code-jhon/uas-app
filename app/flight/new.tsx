@@ -148,12 +148,24 @@ export default function NewFlightScreen() {
   const today = format(new Date(), 'yyyy-MM-dd');
   const initialDraft = useFlightDraftStore.getState().draft;
 
+  // Defaults de horas de bloque al crear un vuelo nuevo (PAR-13): blockOut =
+  // hora actual, blockIn = hora actual + 2h. Si sumar 2h cruza la medianoche
+  // (hora actual >= 22:00), blockIn queda vacío en vez de envolver al día siguiente.
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const defaultBlockOut = format(now, 'HH:mm');
+  const defaultBlockIn = nowMinutes + 120 >= 1440
+    ? ''
+    : format(new Date(now.getTime() + 2 * 60 * 60 * 1000), 'HH:mm');
+
   const [flightType, setFlightType] = useState<FlightType>(initialDraft?.flightType ?? 'manned');
   const isUAS = flightType === 'uas';
 
   const [date, setDate]           = useState(initialDraft?.date ?? today);
-  const [blockOut, setBlockOut]   = useState(initialDraft?.blockOut ?? '');
-  const [blockIn, setBlockIn]     = useState(initialDraft?.blockIn ?? '');
+  // El borrador restaurado (PAR-9) tiene prioridad sobre los defaults: solo se
+  // prellena cuando no hay valores ya diligenciados o restaurados.
+  const [blockOut, setBlockOut]   = useState(initialDraft?.blockOut ?? defaultBlockOut);
+  const [blockIn, setBlockIn]     = useState(initialDraft?.blockIn ?? defaultBlockIn);
   const [totalTime, setTotalTime] = useState(initialDraft?.totalTime ?? '');
   const [notes, setNotes]         = useState(initialDraft?.notes ?? '');
   const [saving, setSaving]       = useState(false);
@@ -241,16 +253,16 @@ export default function NewFlightScreen() {
     deleteExecution(executionId).catch(() => { /* best effort */ });
   };
 
-  // Auto-calculate total time when both block times are set and totalTime is empty
+  // Horas de vuelo derivadas del intervalo (PAR-13): se recalculan en cada
+  // cambio de blockOut/blockIn. El campo de total es de solo lectura (ver
+  // TextInput más abajo); intervalo incompleto o inválido (fin < inicio) → 0.
   useEffect(() => {
-    if (!blockOut || !blockIn || totalTime) return;
-    // Skip auto-calc for inverted ranges (arrival before departure); save guards it.
-    if (!isValidTimeRange(blockOut, blockIn)) return;
-    const out = minutesOfDay(blockOut);
-    const back = minutesOfDay(blockIn);
-    if (isNaN(out) || isNaN(back)) return;
-    const diff = back - out;
-    if (diff > 0) setTotalTime(String(Math.round((diff / 60) * 10) / 10));
+    if (blockOut && blockIn && isValidTimeRange(blockOut, blockIn)) {
+      const diff = minutesOfDay(blockIn) - minutesOfDay(blockOut);
+      setTotalTime(String(Math.round((diff / 60) * 10) / 10));
+    } else {
+      setTotalTime('0');
+    }
   }, [blockOut, blockIn]);
 
   // ── Captura GPS + geocodificación inversa ──
@@ -311,11 +323,9 @@ export default function NewFlightScreen() {
 
     setSaving(true);
     try {
-      let total = parseFloat(totalTime) || undefined;
-      if (!total && blockOut && blockIn) {
-        const diff = minutesOfDay(blockIn) - minutesOfDay(blockOut);
-        total = Math.round((diff / 60) * 10) / 10;
-      }
+      // totalTime ya viene derivado del intervalo (PAR-13); no hace falta
+      // recalcularlo aquí.
+      const total = parseFloat(totalTime) || undefined;
 
       let flight;
       if (isUAS) {
@@ -491,11 +501,11 @@ export default function NewFlightScreen() {
               <Field label={t('flight.new.totalTime')} half subColor={sub}>
                 <TextInput
                   value={totalTime}
-                  onChangeText={setTotalTime}
+                  editable={false}
                   placeholder="1.8"
                   placeholderTextColor={sub}
                   keyboardType="decimal-pad"
-                  style={inputStyle}
+                  style={{ ...inputStyle, opacity: 0.6 }}
                 />
               </Field>
               <Field label={t('flight.new.nightTime')} half subColor={sub}>
@@ -636,9 +646,9 @@ export default function NewFlightScreen() {
 
             <Field label={t('flight.new.totalTimeUas')} subColor={sub}>
               <TextInput
-                value={totalTime} onChangeText={setTotalTime}
+                value={totalTime} editable={false}
                 placeholder="1.5" placeholderTextColor={sub}
-                keyboardType="decimal-pad" style={inputStyle}
+                keyboardType="decimal-pad" style={{ ...inputStyle, opacity: 0.6 }}
               />
             </Field>
 
