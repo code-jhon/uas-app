@@ -276,7 +276,6 @@ const pt: Resources = {
       mine: 'Meus checklists',
       empty: 'Ainda não há checklists',
       template: 'MODELO',
-      execute: 'Executar',
       clone: 'Clonar',
       delete: 'Excluir',
       itemsSections: '{{items}} itens · {{sections}} seções',
@@ -303,7 +302,6 @@ const pt: Resources = {
       noItemsMsg: 'Adicione pelo menos um item ao checklist.',
     },
     detail: {
-      execute: 'Executar',
       itemsSections: '{{items}} itens · {{sections}} seções',
       required: 'Obrigatório',
     },
