@@ -19,7 +19,7 @@ interface AwcMetarResponse {
   slp?: number;
   qcField?: number;
   wxString?: string;
-  skyCondition?: Array<{ skyCover: string; cloudBase?: number }>;
+  skyCondition?: { skyCover: string; cloudBase?: number }[];
   fltcat?: string;
   clouds?: string;
   rawOb?: string;
@@ -121,9 +121,9 @@ function deriveCategory(
 
 // ─── Human-readable decoding ──────────────────────────────────────────────────
 
-export function decodeMetar(metar: MetarData): Array<{ label: string; value: string }> {
+export function decodeMetar(metar: MetarData): { label: string; value: string }[] {
   const t = i18n.t.bind(i18n);
-  const lines: Array<{ label: string; value: string }> = [];
+  const lines: { label: string; value: string }[] = [];
 
   if (metar.wind) {
     const dir = metar.wind.direction === 'VRB' ? t('metar.decode.variable') : `${metar.wind.direction}°`;

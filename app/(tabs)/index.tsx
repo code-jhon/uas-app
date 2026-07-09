@@ -7,8 +7,7 @@ import { Plus, PlaneTakeoff, CloudSun, Activity, Settings } from 'lucide-react-n
 import { useFavoritesStore } from '../../src/store/favoritesStore';
 import { useAuthStore } from '../../src/store/authStore';
 import { fetchMetarBatch } from '../../src/api/awc';
-import { fetchKpCurrent } from '../../src/api/swpc';
-import { kpColor } from '../../src/api/swpc';
+import { fetchKpCurrent, kpColor } from '../../src/api/swpc';
 import MetarCard from '../../src/components/MetarCard';
 import FlightConditionsBanner from '../../src/components/FlightConditionsBanner';
 import { getFlightStats } from '../../src/db/flights';

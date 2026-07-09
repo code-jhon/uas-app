@@ -113,7 +113,7 @@ export async function cloneTemplate(templateId: string, newName: string): Promis
 export async function createChecklist(
   name: string,
   description?: string,
-  sections?: Array<{ title: string; items: Array<{ title: string; description?: string; required?: boolean }> }>
+  sections?: { title: string; items: { title: string; description?: string; required?: boolean }[] }[]
 ): Promise<string> {
   const db = await getDatabase();
   const id = randomUUID();

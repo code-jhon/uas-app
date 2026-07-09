@@ -73,7 +73,7 @@ async function getThumbnail(title: string): Promise<{ url: string; pageTitle: st
   const data: unknown = await resp.json();
   const pages = Object.values(
     (data as { query: { pages: Record<string, unknown> } }).query.pages
-  ) as Array<{ missing?: boolean; thumbnail?: { source: string }; title: string }>;
+  ) as { missing?: boolean; thumbnail?: { source: string }; title: string }[];
   const page = pages[0];
   if (!page || 'missing' in page || !page.thumbnail) return null;
   return { url: page.thumbnail.source, pageTitle: page.title };
@@ -91,7 +91,7 @@ async function searchWikipedia(query: string): Promise<string | null> {
   const resp = await fetch(`${BASE_WP}?${params}`);
   const data: unknown = await resp.json();
   const results = (
-    data as { query: { search: Array<{ title: string }> } }
+    data as { query: { search: { title: string }[] } }
   ).query.search;
   return results[0]?.title ?? null;
 }

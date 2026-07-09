@@ -1,5 +1,4 @@
 import { View, Text, TouchableOpacity } from 'react-native';
-import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, ShieldCheck, AlertTriangle, ShieldX, CloudOff } from 'lucide-react-native';
@@ -35,7 +34,6 @@ function LevelIcon({ level, color }: { level: FlightConditionLevel; color: strin
 export default function FlightConditionsBanner({ metar, kp, hasFavorites }: Props) {
   const router = useRouter();
   const { t } = useTranslation();
-  const isDark = useAppColorScheme() === 'dark';
 
   const result = evaluateFlightConditions(metar, kp);
   const color = levelColor(result.level);

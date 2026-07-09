@@ -24,14 +24,14 @@ export default function SettingsScreen() {
   const border = isDark ? '#334155' : '#e2e8f0';
   const accent = '#0284c7';
 
-  const options: Array<{ value: LanguagePreference; label: string; desc?: string; system?: boolean }> = [
+  const options: { value: LanguagePreference; label: string; desc?: string; system?: boolean }[] = [
     { value: 'system', label: t('settings.systemDefault'), desc: t('settings.systemDefaultDesc'), system: true },
     { value: 'es', label: t('settings.languageEs') },
     { value: 'en', label: t('settings.languageEn') },
     { value: 'pt', label: t('settings.languagePt') },
   ];
 
-  const themeOptions: Array<{ value: ThemePreference; label: string; desc?: string; icon: ComponentType<LucideProps> }> = [
+  const themeOptions: { value: ThemePreference; label: string; desc?: string; icon: ComponentType<LucideProps> }[] = [
     { value: 'system', label: t('settings.themeSystem'), desc: t('settings.themeSystemDesc'), icon: Smartphone },
     { value: 'light', label: t('settings.themeLight'), icon: Sun },
     { value: 'dark', label: t('settings.themeDark'), icon: Moon },

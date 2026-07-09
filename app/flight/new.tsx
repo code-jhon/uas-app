@@ -177,7 +177,7 @@ export default function NewFlightScreen() {
   const [aircraftType, setAcType]   = useState(initialDraft?.aircraftType ?? '');
   const [nightTime, setNightTime]   = useState(initialDraft?.nightTime ?? '');
   const [ifrTime, setIfrTime]       = useState(initialDraft?.ifrTime ?? '');
-  const [picTime, setPicTime]       = useState(initialDraft?.picTime ?? '');
+  const [picTime]                   = useState(initialDraft?.picTime ?? '');
   const [landingsDay, setLdDay]     = useState(initialDraft?.landingsDay ?? '');
   const [landingsNight, setLdNight] = useState(initialDraft?.landingsNight ?? '');
   const [approaches, setApproaches] = useState(initialDraft?.approaches ?? '');
@@ -198,7 +198,7 @@ export default function NewFlightScreen() {
   const [siteFromGps, setSiteFromGps] = useState(initialDraft?.siteFromGps ?? false);
 
   // ── Checklists ejecutados durante la creación del vuelo (PAR-9) ──
-  const [pendingExecutions, setPendingExecutions] = useState<Array<{ executionId: string; checklistName: string }>>([]);
+  const [pendingExecutions, setPendingExecutions] = useState<{ executionId: string; checklistName: string }[]>([]);
   const savedRef = useRef(false);
   const pendingRef = useRef(pendingExecutions);
   pendingRef.current = pendingExecutions;

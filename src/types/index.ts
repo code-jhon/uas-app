@@ -28,7 +28,7 @@ export interface MetarData {
   observedAt: string; // ISO
   wind?: { direction: number | 'VRB'; speedKt: number; gustKt?: number };
   visibilityMiles?: number;
-  clouds: Array<{ coverage: 'FEW' | 'SCT' | 'BKN' | 'OVC' | 'CLR'; baseHundredFt: number }>;
+  clouds: { coverage: 'FEW' | 'SCT' | 'BKN' | 'OVC' | 'CLR'; baseHundredFt: number }[];
   tempC?: number;
   dewpointC?: number;
   altimeterHpa?: number;
