@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, BookOpen, Trash2, ChevronRight, Plane, Cpu,
-  Share2, Download, Upload, FileText, FileJson, Sheet, X,
+  Share2, Upload, FileText, FileJson, Sheet, X,
 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';

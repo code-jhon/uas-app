@@ -12,7 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 interface SectionDraft {
   title: string;
-  items: Array<{ title: string; required: boolean }>;
+  items: { title: string; required: boolean }[];
 }
 
 export default function NewChecklistScreen() {

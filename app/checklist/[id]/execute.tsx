@@ -1,12 +1,12 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, ScrollView, Modal, TextInput, Alert, Platform,
+  View, Text, TouchableOpacity, ScrollView, Modal, TextInput, Alert,
 } from 'react-native';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { CheckCircle2, Circle, MinusCircle, SkipForward, ChevronLeft, ChevronRight, X } from 'lucide-react-native';
+import { CheckCircle2, MinusCircle, SkipForward, ChevronLeft, ChevronRight, X } from 'lucide-react-native';
 import { getChecklistById, startExecution, saveItemResult, completeExecution } from '../../../src/db/checklists';
 import { ChecklistItem, ItemStatus } from '../../../src/types';
 
@@ -124,14 +124,6 @@ export default function ExecuteChecklistScreen() {
   };
 
   if (!checklist) return null;
-
-  const statusColor = (status: ItemStatus | undefined) => {
-    if (!status || status === 'pending') return sub;
-    if (status === 'ok') return '#22c55e';
-    if (status === 'na') return '#94a3b8';
-    if (status === 'skipped') return '#eab308';
-    return sub;
-  };
 
   return (
     <View style={{ flex: 1, backgroundColor: bg }}>

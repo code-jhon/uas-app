@@ -25,6 +25,7 @@ export function resolveDeviceLanguage(): AppLanguage {
   return FALLBACK_LANGUAGE;
 }
 
+// eslint-disable-next-line import/no-named-as-default-member -- `.use()` is the intended i18next chaining API, not the i18next named `use` export
 i18n
   .use(initReactI18next)
   .init({

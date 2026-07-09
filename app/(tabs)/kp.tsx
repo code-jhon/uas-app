@@ -296,10 +296,10 @@ function ScaleRange({ range, label, desc, color, C }: {
 
 const UTC_LABELS = ['00', '03', '06', '09', '12', '15', '18', '21'];
 
-const IMPACT_ROWS: Array<{
+const IMPACT_ROWS: {
   key: 'hf' | 'gps' | 'compass' | 'aurora';
   Icon: React.ComponentType<{ size: number; color: string }>;
-}> = [
+}[] = [
   { key: 'hf',      Icon: Radio },
   { key: 'gps',     Icon: Satellite },
   { key: 'compass', Icon: Compass },
@@ -329,7 +329,6 @@ export default function KpScreen() {
 
   const {
     data: forecast,
-    isPending: forecastLoading,
   } = useQuery({
     queryKey: ['kp-forecast'],
     queryFn: fetchKpForecast,

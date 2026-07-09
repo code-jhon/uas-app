@@ -170,11 +170,11 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
 async function seedTemplates(db: SQLite.SQLiteDatabase): Promise<void> {
   const { randomUUID } = await import('../utils/uuid');
 
-  const templates: Array<{
+  const templates: {
     name: string;
     description: string;
-    sections: Array<{ title: string; items: Array<{ title: string; description?: string; required?: boolean }> }>;
-  }> = [
+    sections: { title: string; items: { title: string; description?: string; required?: boolean }[] }[];
+  }[] = [
     {
       name: 'Cessna 172 — Pre-vuelo VFR diurno',
       description: 'Inspección pre-vuelo estándar para Cessna 172 en condiciones VFR diurnas',
