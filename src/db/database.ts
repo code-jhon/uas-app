@@ -11,6 +11,11 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
 
 async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
   await db.execAsync(`PRAGMA journal_mode = WAL;`);
+  // Enable foreign key enforcement so ON DELETE CASCADE actually runs.
+  // SQLite applies this per-connection and it must be set outside any
+  // transaction. getDatabase() reuses a single connection, so setting it
+  // here at startup covers every subsequent operation. (PAR-14)
+  await db.execAsync(`PRAGMA foreign_keys = ON;`);
 
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS aircraft (
@@ -128,6 +133,22 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
   for (const sql of uasAlters) {
     try { await db.runAsync(sql); } catch { /* column already exists – ignore */ }
   }
+
+  // Cleanup of pre-existing orphan rows left behind while foreign_keys was
+  // off (before PAR-14). Deleted top-down within the checklist tree
+  // (section before item) so that items orphaned only because their parent
+  // section is itself an orphan get removed in the SAME pass — otherwise the
+  // item's section still "exists" when we check it and survives until the
+  // next startup. The item_result tree is independent (execution has no FK).
+  // Idempotent: DELETE ... NOT IN is safe to re-run on every startup.
+  await db.execAsync(`
+    DELETE FROM checklist_item_result
+      WHERE execution_id NOT IN (SELECT id FROM checklist_execution);
+    DELETE FROM checklist_section
+      WHERE checklist_id NOT IN (SELECT id FROM checklist);
+    DELETE FROM checklist_item
+      WHERE section_id NOT IN (SELECT id FROM checklist_section);
+  `);
 
   // Seed manned templates on first run
   const count = await db.getFirstAsync<{ c: number }>(
