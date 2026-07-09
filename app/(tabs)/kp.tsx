@@ -353,7 +353,7 @@ export default function KpScreen() {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <TouchableOpacity
-          onPress={() => router.navigate('/')}
+          onPress={() => router.navigate('/(tabs)')}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
         >
           <ChevronLeft size={24} color={C.accent} />
