@@ -135,15 +135,19 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
   }
 
   // Cleanup of pre-existing orphan rows left behind while foreign_keys was
-  // off (before PAR-14). Deleted child->grandchild order. Idempotent:
-  // DELETE ... NOT IN is safe to re-run on every startup (no-op once clean).
+  // off (before PAR-14). Deleted top-down within the checklist tree
+  // (section before item) so that items orphaned only because their parent
+  // section is itself an orphan get removed in the SAME pass — otherwise the
+  // item's section still "exists" when we check it and survives until the
+  // next startup. The item_result tree is independent (execution has no FK).
+  // Idempotent: DELETE ... NOT IN is safe to re-run on every startup.
   await db.execAsync(`
     DELETE FROM checklist_item_result
       WHERE execution_id NOT IN (SELECT id FROM checklist_execution);
-    DELETE FROM checklist_item
-      WHERE section_id NOT IN (SELECT id FROM checklist_section);
     DELETE FROM checklist_section
       WHERE checklist_id NOT IN (SELECT id FROM checklist);
+    DELETE FROM checklist_item
+      WHERE section_id NOT IN (SELECT id FROM checklist_section);
   `);
 
   // Seed manned templates on first run
