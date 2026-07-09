@@ -41,7 +41,8 @@
       "Read(//private/tmp/**)",
       "Bash(echo \"===== lint =====\"; yarn lint >/tmp/l.out 2>&1; echo \"EXIT: $?\"; tail -4 /tmp/l.out)",
       "Bash(yarn install *)",
-      "Bash(npx expo-doctor *)"
+      "Bash(npx expo-doctor *)",
+      "Bash(git push *)"
     ],
     "additionalDirectories": [
       "/private/tmp"
