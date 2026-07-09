@@ -31,7 +31,20 @@
       "Bash(Select-Object Name, FullName)",
       "Bash(npx eslint *)",
       "Bash(npm run *)",
-      "Bash(xargs -I{} sh -c 'echo ===={}====; cat {}')"
+      "Bash(xargs -I{} sh -c 'echo ===={}====; cat {}')",
+      "Bash(echo \"exit: $?\")",
+      "Bash(echo \"exit=$?\")",
+      "Bash(yarn add *)",
+      "Bash(yarn lint *)",
+      "Bash(yarn remove *)",
+      "Bash(cat /tmp/l.out | head -30)",
+      "Read(//private/tmp/**)",
+      "Bash(echo \"===== lint =====\"; yarn lint >/tmp/l.out 2>&1; echo \"EXIT: $?\"; tail -4 /tmp/l.out)",
+      "Bash(yarn install *)",
+      "Bash(npx expo-doctor *)"
+    ],
+    "additionalDirectories": [
+      "/private/tmp"
     ]
   }
 }
