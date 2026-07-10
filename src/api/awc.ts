@@ -1,14 +1,9 @@
 import { MetarData } from '../types';
 import { parseAwcMetar } from '../utils/metar';
+import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 import { cacheMetar, getLatestCachedMetar } from '../db/metarCache';
 
 const BASE = 'https://aviationweather.gov/api/data';
-
-function fetchWithTimeout(url: string, ms: number): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ms);
-  return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
-}
 
 export async function fetchMetar(icao: string): Promise<MetarData> {
   const code = icao.toUpperCase();
