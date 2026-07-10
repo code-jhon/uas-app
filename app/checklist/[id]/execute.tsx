@@ -28,6 +28,11 @@ export default function ExecuteChecklistScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const [executionId, setExecutionId] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, { status: ItemStatus; note?: string }>>({});
+  // Mirror of `results` in a ref so setResult can read an item's current
+  // value synchronously, without depending on when React flushes the state
+  // updater (rapid taps leave updates pending and skip React's eager eval).
+  const resultsRef = useRef(results);
+  useEffect(() => { resultsRef.current = results; }, [results]);
   const [skipModal, setSkipModal] = useState<{ item: ChecklistItem } | null>(null);
   const [skipReason, setSkipReason] = useState('');
   const [completing, setCompleting] = useState(false);
@@ -58,9 +63,26 @@ export default function ExecuteChecklistScreen() {
 
   const setResult = useCallback(async (item: ChecklistItem, status: ItemStatus, note?: string) => {
     if (!executionId) return;
+    // Snapshot the previous value from the ref (not from inside the state
+    // updater) so rollback is correct even when React defers the updater.
+    const previous = resultsRef.current[item.id];
     setResults((prev) => ({ ...prev, [item.id]: { status, note } }));
-    await saveItemResult({ executionId, itemId: item.id, status, note });
-  }, [executionId]);
+    try {
+      await saveItemResult({ executionId, itemId: item.id, status, note });
+    } catch (e) {
+      // Revert the optimistic update so canClose() doesn't treat an
+      // un-persisted item as resolved, and surface the failure to the user
+      // instead of swallowing it.
+      console.error('saveItemResult failed', e);
+      setResults((prev) => {
+        const next = { ...prev };
+        if (previous === undefined) delete next[item.id];
+        else next[item.id] = previous;
+        return next;
+      });
+      Alert.alert(t('common.error'), t('checklists.execute.saveResultError'));
+    }
+  }, [executionId, t]);
 
   // Auto-advance to the next section when the last item of the current page gets a status.
   const advanceIfLastItem = useCallback((item: ChecklistItem) => {
