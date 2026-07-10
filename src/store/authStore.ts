@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
+import { createPinEnvelope, serializePinEnvelope, verifyPinValue } from '../utils/pinCrypto';
 
 export type LicenseType = 'Estudiante' | 'PPL' | 'CPL' | 'ATPL' | 'Instructor';
 
@@ -66,14 +67,21 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     };
     await SecureStore.setItemAsync(KEYS.profile, JSON.stringify(profile));
     if (pin) {
-      await SecureStore.setItemAsync(KEYS.pin, pin);
+      // Never store the PIN in plain text: persist a salted SHA-256 envelope.
+      const envelope = await createPinEnvelope(pin);
+      await SecureStore.setItemAsync(KEYS.pin, serializePinEnvelope(envelope));
     }
     set({ profile });
   },
 
   verifyPin: async (pin) => {
     const stored = await SecureStore.getItemAsync(KEYS.pin);
-    return stored === pin;
+    const { ok, migrated } = await verifyPinValue(pin, stored);
+    // Transparent lazy migration of legacy plain-text PINs on first correct login.
+    if (ok && migrated) {
+      await SecureStore.setItemAsync(KEYS.pin, migrated);
+    }
+    return ok;
   },
 
   acceptDisclaimer: async () => {
