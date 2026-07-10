@@ -1,12 +1,7 @@
 import { KpForecast, KpReading } from '../types';
+import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 
 const BASE = 'https://services.swpc.noaa.gov';
-
-function fetchWithTimeout(url: string, ms: number): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ms);
-  return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
-}
 
 export async function fetchKpCurrent(): Promise<KpReading[]> {
   const resp = await fetchWithTimeout(`${BASE}/json/planetary_k_index_1m.json`, 8000);
