@@ -12,7 +12,7 @@ import { Search, Star, StarOff, X } from 'lucide-react-native';
 import { fetchMetar } from '../../src/api/awc';
 import { useFavoritesStore } from '../../src/store/favoritesStore';
 import MetarCard from '../../src/components/MetarCard';
-import { COLOMBIA_AIRPORTS } from '../../src/data/airports';
+import { searchAirports, getAirportByCode } from '../../src/db/airports';
 
 export default function MetarScreen() {
   const router = useRouter();
@@ -31,18 +31,24 @@ export default function MetarScreen() {
   const inputBg = isDark ? '#1e293b' : '#ffffff';
 
   // Show suggestions when user is typing something different from last search
-  const suggestions = query.length >= 2 && query.toUpperCase() !== submitted
-    ? COLOMBIA_AIRPORTS.filter((a) =>
-        a.icao.startsWith(query.toUpperCase()) ||
-        a.name.toLowerCase().includes(query.toLowerCase())
-      ).slice(0, 8)
-    : [];
+  const { data: suggestions = [] } = useQuery({
+    queryKey: ['airport-search', query],
+    queryFn: () => searchAirports(query, 8),
+    enabled: query.length >= 2 && query.toUpperCase() !== submitted,
+  });
 
   const { data: metar, isFetching, error, refetch } = useQuery({
     queryKey: ['metar', submitted],
     queryFn: () => fetchMetar(submitted),
     enabled: submitted.length === 4,
     retry: 0,
+  });
+
+  // Airport directory entry for the current result (name + country).
+  const { data: resultAirport } = useQuery({
+    queryKey: ['airport', metar?.icao],
+    queryFn: () => getAirportByCode(metar!.icao),
+    enabled: !!metar,
   });
 
   const handleSearch = useCallback((icao: string) => {
@@ -56,7 +62,7 @@ export default function MetarScreen() {
   const handleSubmitEditing = () => {
     // If query matches exactly one suggestion, use that airport
     if (suggestions.length === 1) {
-      handleSearch(suggestions[0].icao);
+      handleSearch(suggestions[0].icao ?? suggestions[0].id);
       return;
     }
     handleSearch(query);
@@ -72,11 +78,10 @@ export default function MetarScreen() {
     if (isFavorite(metar.icao)) {
       removeFavorite(metar.icao);
     } else {
-      const airport = COLOMBIA_AIRPORTS.find((a) => a.icao === metar.icao);
       addFavorite({
         icao: metar.icao,
-        name: airport?.name ?? metar.icao,
-        country: airport?.country ?? '',
+        name: resultAirport?.name ?? metar.icao,
+        country: resultAirport?.isoCountry ?? '',
       });
     }
   };
@@ -130,15 +135,15 @@ export default function MetarScreen() {
         }}>
           {suggestions.map((a, idx) => (
             <TouchableOpacity
-              key={a.icao}
-              onPress={() => handleSearch(a.icao)}
+              key={a.id}
+              onPress={() => handleSearch(a.icao ?? a.id)}
               style={{
                 padding: 12,
                 borderBottomWidth: idx < suggestions.length - 1 ? 1 : 0,
                 borderBottomColor: border,
               }}
             >
-              <Text style={{ color: text, fontWeight: '600' }}>{a.icao}</Text>
+              <Text style={{ color: text, fontWeight: '600' }}>{a.icao ?? a.id}</Text>
               <Text style={{ color: sub, fontSize: 12 }}>{a.name}</Text>
             </TouchableOpacity>
           ))}
@@ -180,7 +185,7 @@ export default function MetarScreen() {
           <View style={{ marginTop: 16 }}>
             <MetarCard
               icao={metar.icao}
-              name={COLOMBIA_AIRPORTS.find((a) => a.icao === metar.icao)?.name}
+              name={resultAirport?.name}
               metar={metar}
               loading={false}
               expanded
