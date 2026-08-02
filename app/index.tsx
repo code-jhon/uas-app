@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
+import { brand } from '../src/theme';
 
 type Target = '/auth/disclaimer' | '/auth/signup' | '/auth/signin' | '/(tabs)';
 
@@ -43,8 +44,8 @@ export default function EntryScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0f172a', alignItems: 'center', justifyContent: 'center' }}>
-      <ActivityIndicator color="#0284c7" size="large" />
+    <View style={{ flex: 1, backgroundColor: brand.bg, alignItems: 'center', justifyContent: 'center' }}>
+      <ActivityIndicator color={brand.accent} size="large" />
     </View>
   );
 }
