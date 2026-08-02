@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, Alert,
-  Modal, ActivityIndicator,
+  Modal, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useRouter } from 'expo-router';
@@ -212,15 +212,19 @@ export default function LogbookScreen() {
   const C      = useC();
   const { t }  = useTranslation();
 
-  const { data: flights = [] } = useQuery({
+  const { data: flights = [], isFetching: flightsFetching, refetch: refetchFlights } = useQuery({
     queryKey: ['flights'],
     queryFn: getFlights,
   });
 
-  const { data: stats } = useQuery({
+  const { data: stats, isFetching: statsFetching, refetch: refetchStats } = useQuery({
     queryKey: ['flight-stats'],
     queryFn: getFlightStats,
   });
+
+  const onRefresh = useCallback(() => {
+    void Promise.all([refetchFlights(), refetchStats()]);
+  }, [refetchFlights, refetchStats]);
 
   const deleteMutation = useMutation({
     mutationFn: deleteFlight,
@@ -354,6 +358,13 @@ export default function LogbookScreen() {
         data={flights}
         keyExtractor={(f) => f.id}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={flightsFetching || statsFetching}
+            onRefresh={onRefresh}
+            tintColor={C.text}
+          />
+        }
         ListHeaderComponent={
           stats && flights.length > 0 ? (
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>

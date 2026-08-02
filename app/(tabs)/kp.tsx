@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  ActivityIndicator,
+  ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useQuery } from '@tanstack/react-query';
@@ -329,12 +329,18 @@ export default function KpScreen() {
 
   const {
     data: forecast,
+    isFetching: forecastFetching,
+    refetch: refetchForecast,
   } = useQuery({
     queryKey: ['kp-forecast'],
     queryFn: fetchKpForecast,
     staleTime: 60 * 60 * 1000,
     retry: 1,
   });
+
+  const onRefresh = useCallback(() => {
+    void Promise.all([refetchCurrent(), refetchForecast()]);
+  }, [refetchCurrent, refetchForecast]);
 
   const latestReading = current?.length ? current[current.length - 1] : null;
   const latestKp      = latestReading != null ? latestReading.kp : null;
@@ -345,6 +351,13 @@ export default function KpScreen() {
     <ScrollView
       style={{ flex: 1, backgroundColor: C.bgPrimary }}
       contentContainerStyle={{ paddingBottom: 48 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={currentFetching || forecastFetching}
+          onRefresh={onRefresh}
+          tintColor={C.textPrimary}
+        />
+      }
     >
       {/* ── Nav Bar ── */}
       <View style={{

@@ -1,4 +1,4 @@
-import { View, Text, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -20,7 +20,7 @@ export default function ChecklistsScreen() {
   const sub = isDark ? '#94a3b8' : '#64748b';
   const border = isDark ? '#334155' : '#e2e8f0';
 
-  const { data: checklists = [] } = useQuery({
+  const { data: checklists = [], isFetching, refetch } = useQuery({
     queryKey: ['checklists'],
     queryFn: () => getChecklists(),
   });
@@ -116,6 +116,9 @@ export default function ChecklistsScreen() {
         data={[...templates, ...custom]}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={text} />
+        }
         ListHeaderComponent={
           <>
             {templates.length > 0 && (

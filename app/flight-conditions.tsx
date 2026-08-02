@@ -1,10 +1,11 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   Linking,
+  RefreshControl,
   } from 'react-native';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useRouter } from 'expo-router';
@@ -63,22 +64,26 @@ export default function FlightConditionsScreen() {
   const sub = isDark ? '#94a3b8' : '#64748b';
   const border = isDark ? '#334155' : '#e2e8f0';
 
-  const { data: metar } = useQuery({
+  const { data: metar, isFetching: metarFetching, refetch: refetchMetar } = useQuery({
     queryKey: ['metar', primary?.icao],
     queryFn: () => fetchMetar(primary!.icao),
     enabled: !!primary,
   });
 
-  const { data: kpData } = useQuery({
+  const { data: kpData, isFetching: kpFetching, refetch: refetchKp } = useQuery({
     queryKey: ['kp-current'],
     queryFn: fetchKpCurrent,
     staleTime: 10 * 60 * 1000,
   });
 
-  const { data: uasLocation } = useQuery({
+  const { data: uasLocation, isFetching: uasFetching, refetch: refetchUas } = useQuery({
     queryKey: ['last-uas-location'],
     queryFn: getLastUasFlightLocation,
   });
+
+  const onRefresh = useCallback(() => {
+    void Promise.all([refetchMetar(), refetchKp(), refetchUas()]);
+  }, [refetchMetar, refetchKp, refetchUas]);
 
   const latestKp = kpData?.length ? kpData[kpData.length - 1].kp : null;
   const result = useMemo(() => evaluateFlightConditions(metar, latestKp), [metar, latestKp]);
@@ -127,7 +132,18 @@ export default function FlightConditionsScreen() {
   };
 
   return (
-    <ScrollView className="flex-1" style={{ backgroundColor: bg }} contentContainerStyle={{ paddingBottom: 40 }}>
+    <ScrollView
+      className="flex-1"
+      style={{ backgroundColor: bg }}
+      contentContainerStyle={{ paddingBottom: 40 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={metarFetching || kpFetching || uasFetching}
+          onRefresh={onRefresh}
+          tintColor={text}
+        />
+      }
+    >
       {/* Nav bar */}
       <View style={{ paddingTop: 56, paddingHorizontal: 20, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <TouchableOpacity
