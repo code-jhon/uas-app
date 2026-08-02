@@ -20,7 +20,7 @@ import { fetchMetar } from '../../src/api/awc';
 import { useFavoritesStore } from '../../src/store/favoritesStore';
 import { formatAge, calcRelativeHumidity, calcDensityAltitude } from '../../src/utils/metar';
 import { getNumberLocaleTag } from '../../src/i18n/dateLocale';
-import { COLOMBIA_AIRPORTS } from '../../src/data/airports';
+import { getAirportByCode } from '../../src/db/airports';
 import { FlightCategory, MetarData } from '../../src/types';
 
 // ─── Design tokens (matches design variables) ─────────────────────────────────
@@ -173,12 +173,16 @@ export default function MetarDetailScreen() {
   });
 
   const { isFavorite, addFavorite, removeFavorite } = useFavoritesStore();
-  const airport = COLOMBIA_AIRPORTS.find(a => a.icao === code);
+  const { data: airport } = useQuery({
+    queryKey: ['airport', code],
+    queryFn: () => getAirportByCode(code),
+    enabled: code.length >= 3,
+  });
   const fav = isFavorite(code);
 
   const toggleFav = () => {
     if (fav) removeFavorite(code);
-    else addFavorite({ icao: code, name: airport?.name ?? code, country: airport?.country ?? '' });
+    else addFavorite({ icao: code, name: airport?.name ?? code, country: airport?.isoCountry ?? '' });
   };
 
   const handleShare = async () => {

@@ -15,7 +15,7 @@ import {
 import { getFlightById } from '../../src/db/flights';
 import { getExecutions, getChecklistById } from '../../src/db/checklists';
 import { ChecklistExecution, ItemStatus } from '../../src/types';
-import { COLOMBIA_AIRPORTS } from '../../src/data/airports';
+import { getAirportByCode } from '../../src/db/airports';
 import {
   extractDroneModel, fetchDroneImage,
   detectBrand, djiProductPage,
@@ -416,15 +416,25 @@ export default function FlightDetailScreen() {
     enabled: !!id,
   });
 
+  // Resolve airport coordinates/names for manned flights from the airport table.
+  const isManned = !!flight && flight.flightType !== 'uas';
+  const { data: originAirport = null } = useQuery({
+    queryKey: ['airport', flight?.originIcao],
+    queryFn: () => getAirportByCode(flight!.originIcao),
+    enabled: isManned && !!flight?.originIcao,
+  });
+  const { data: destinationAirport = null } = useQuery({
+    queryKey: ['airport', flight?.destinationIcao],
+    queryFn: () => getAirportByCode(flight!.destinationIcao),
+    enabled: isManned && !!flight?.destinationIcao,
+  });
+
   if (!flight) return null;
 
   const isUAS      = flight.flightType === 'uas';
   const hasUasMap  = isUAS && flight.lat != null && flight.lng != null;
   const droneModel = isUAS ? extractDroneModel(flight.notes) : null;
 
-  // Look up airport coordinates for manned flights
-  const originAirport      = !isUAS ? COLOMBIA_AIRPORTS.find(a => a.icao === flight.originIcao) : null;
-  const destinationAirport = !isUAS ? COLOMBIA_AIRPORTS.find(a => a.icao === flight.destinationIcao) : null;
   const hasBothAirports    = !!originAirport && !!destinationAirport;
   const hasAnyAirport      = !!originAirport || !!destinationAirport;
   const knownAirport       = originAirport ?? destinationAirport;
@@ -510,8 +520,8 @@ export default function FlightDetailScreen() {
                 {(originAirport || destinationAirport) && (
                   <Text style={{ color: sub, fontSize: 11, marginTop: 1 }} numberOfLines={1}>
                     {[
-                      originAirport ? `${originAirport.icao} · ${originAirport.name.split(',')[0]}` : flight.originIcao,
-                      destinationAirport ? `${destinationAirport.icao} · ${destinationAirport.name.split(',')[0]}` : flight.destinationIcao,
+                      originAirport ? `${originAirport.icao ?? originAirport.id} · ${originAirport.name.split(',')[0]}` : flight.originIcao,
+                      destinationAirport ? `${destinationAirport.icao ?? destinationAirport.id} · ${destinationAirport.name.split(',')[0]}` : flight.destinationIcao,
                     ].join('  →  ')}
                   </Text>
                 )}

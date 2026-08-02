@@ -46,6 +46,10 @@ yarn-error.*
 !README.md
 !**/README.md
 
+# OurAirports source CSV (re-downloadable; only the generated seed
+# assets/airports.dat is committed and bundled) — PAR-37
+assets/airports.csv
+
 # macOS
 .DS_Store
 

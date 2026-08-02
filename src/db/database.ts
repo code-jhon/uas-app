@@ -1,4 +1,7 @@
 import * as SQLite from 'expo-sqlite';
+import { Asset } from 'expo-asset';
+import { File } from 'expo-file-system';
+import airportsSeed from '../../assets/airports.dat';
 
 let db: SQLite.SQLiteDatabase | null = null;
 
@@ -117,6 +120,26 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+
+    -- Worldwide airport directory (OurAirports dataset, PAR-37). Unlike the
+    -- rest of the schema, the PK is the source \`ident\` code (e.g. SKBO) rather
+    -- than a UUID, so lookups by ICAO/GPS code are direct. Populated once from
+    -- the bundled assets/airports.dat by seedAirports() below.
+    CREATE TABLE IF NOT EXISTS airport (
+      id TEXT PRIMARY KEY,
+      icao TEXT,
+      iata_code TEXT,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      iso_country TEXT NOT NULL,
+      municipality TEXT,
+      lat REAL NOT NULL,
+      lng REAL NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_airport_icao ON airport(icao);
+    CREATE INDEX IF NOT EXISTS idx_airport_iata ON airport(iata_code);
+    CREATE INDEX IF NOT EXISTS idx_airport_country ON airport(iso_country);
+    CREATE INDEX IF NOT EXISTS idx_airport_name ON airport(name COLLATE NOCASE);
   `);
 
   // Migrations v2-v3: UAS columns on flight table (safe to run multiple times)
@@ -165,6 +188,60 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
   if (droneCount?.c === 0) {
     await seedDroneTemplate(db);
   }
+
+  // Seed the worldwide airport directory on first run (PAR-37)
+  await seedAirports(db);
+}
+
+// Bump when assets/airports.dat is regenerated so devices reseed on upgrade.
+const AIRPORT_SEED_VERSION = '1';
+
+type AirportSeedRow = [
+  string, string, string, string, string, string, string, number, number,
+];
+
+/**
+ * Populate the `airport` table from the bundled OurAirports seed
+ * (assets/airports.dat, ~72k rows). Idempotent and versioned via
+ * `app_settings.airport_seed_version`: runs once per version, never on a
+ * device that is already up to date, so reinstalling or reopening the app
+ * neither duplicates nor re-seeds rows. Inserted in a single WAL transaction
+ * in small batches so other reads are not blocked during first launch.
+ */
+async function seedAirports(db: SQLite.SQLiteDatabase): Promise<void> {
+  const current = await db.getFirstAsync<{ value: string }>(
+    `SELECT value FROM app_settings WHERE key = 'airport_seed_version'`
+  );
+  if (current?.value === AIRPORT_SEED_VERSION) return;
+
+  const asset = Asset.fromModule(airportsSeed);
+  await asset.downloadAsync();
+  const uri = asset.localUri ?? asset.uri;
+  const rows = JSON.parse(await new File(uri).text()) as AirportSeedRow[];
+
+  const CHUNK = 100; // keep host-parameter count (CHUNK * 9) well under limits
+  await db.withTransactionAsync(async () => {
+    // Replace any prior data so a version bump reseeds cleanly.
+    await db.execAsync(`DELETE FROM airport`);
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      const chunk = rows.slice(i, i + CHUNK);
+      const placeholders = chunk.map(() => '(?,?,?,?,?,?,?,?,?)').join(',');
+      const params: (string | number | null)[] = [];
+      for (const r of chunk) {
+        params.push(r[0], r[1] || null, r[2] || null, r[3], r[4], r[5], r[6] || null, r[7], r[8]);
+      }
+      await db.runAsync(
+        `INSERT OR REPLACE INTO airport
+           (id, icao, iata_code, name, type, iso_country, municipality, lat, lng)
+           VALUES ${placeholders}`,
+        params
+      );
+    }
+    await db.runAsync(
+      `INSERT OR REPLACE INTO app_settings (key, value) VALUES ('airport_seed_version', ?)`,
+      [AIRPORT_SEED_VERSION]
+    );
+  });
 }
 
 async function seedTemplates(db: SQLite.SQLiteDatabase): Promise<void> {
