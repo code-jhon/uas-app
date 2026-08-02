@@ -10,22 +10,9 @@ import {
   PlaneTakeoff, ArrowRight, Check,
 } from 'lucide-react-native';
 import { useAuthStore, LicenseType } from '../../src/store/authStore';
+import { brand as C } from '../../src/theme';
 
 const LICENSE_TYPES: LicenseType[] = ['Estudiante', 'PPL', 'CPL', 'ATPL', 'Instructor'];
-
-const C = {
-  bg: '#0c1a2e',
-  surface: '#0f172a',
-  card: '#1e293b',
-  border: '#334155',
-  accent: '#0284c7',
-  accentLight: '#38bdf8',
-  text: '#f1f5f9',
-  sub: '#94a3b8',
-  muted: '#475569',
-  error: '#ef4444',
-  success: '#22c55e',
-};
 
 export default function SignUpScreen() {
   const router = useRouter();

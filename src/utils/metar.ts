@@ -1,5 +1,6 @@
 import { FlightCategory, MetarData } from '../types';
 import i18n from '../i18n';
+import { flightCategoryColors, flightCategoryBgColors } from '../theme';
 
 // ─── Parsing ──────────────────────────────────────────────────────────────────
 
@@ -185,23 +186,11 @@ function decodeWeather(wx: string): string {
 // ─── Category color ───────────────────────────────────────────────────────────
 
 export function categoryColor(cat: FlightCategory): string {
-  const map: Record<FlightCategory, string> = {
-    VFR: '#22c55e',
-    MVFR: '#3b82f6',
-    IFR: '#ef4444',
-    LIFR: '#a855f7',
-  };
-  return map[cat];
+  return flightCategoryColors[cat];
 }
 
 export function categoryBg(cat: FlightCategory): string {
-  const map: Record<FlightCategory, string> = {
-    VFR: '#166534',
-    MVFR: '#1e3a8a',
-    IFR: '#7f1d1d',
-    LIFR: '#581c87',
-  };
-  return map[cat];
+  return flightCategoryBgColors[cat];
 }
 
 // ─── Derived calculations ─────────────────────────────────────────────────────
