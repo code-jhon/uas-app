@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard,
+  RefreshControl,
 } from 'react-native';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useRouter } from 'expo-router';
@@ -37,7 +38,7 @@ export default function MetarScreen() {
       ).slice(0, 8)
     : [];
 
-  const { data: metar, isFetching, error } = useQuery({
+  const { data: metar, isFetching, error, refetch } = useQuery({
     queryKey: ['metar', submitted],
     queryFn: () => fetchMetar(submitted),
     enabled: submitted.length === 4,
@@ -147,6 +148,14 @@ export default function MetarScreen() {
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isFetching}
+            onRefresh={refetch}
+            enabled={submitted.length === 4}
+            tintColor={text}
+          />
+        }
       >
         {/* Loading */}
         {isFetching && (

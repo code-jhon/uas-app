@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  ActivityIndicator, Share, Platform,
+  ActivityIndicator, Share, Platform, RefreshControl,
 } from 'react-native';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -218,6 +218,14 @@ export default function MetarDetailScreen() {
     <ScrollView
       style={{ flex: 1, backgroundColor: C.bgPrimary }}
       contentContainerStyle={{ paddingBottom: 48 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={isFetching}
+          onRefresh={refetch}
+          enabled={code.length === 4}
+          tintColor={C.textPrimary}
+        />
+      }
     >
       {/* ── Nav Bar ── */}
       <View style={{
