@@ -21,14 +21,14 @@ Expo SDK 54 · Expo Router (file-based) · TypeScript strict · Zustand (+ Secur
 ## Comandos
 
 ```bash
-npm start          # Servidor de desarrollo Expo (iOS / Android / web)
-npm run ios        # Simulador iOS
-npm run android    # Emulador Android
-npm run web         # Vista previa web
-npm run lint       # ESLint (flat config, eslint-config-expo) sobre todo el proyecto
+yarn start         # Servidor de desarrollo Expo (iOS / Android / web)
+yarn ios           # Simulador iOS
+yarn android       # Emulador Android
+yarn web           # Vista previa web
+yarn lint          # ESLint (flat config, eslint-config-expo) sobre todo el proyecto
 ```
 
-No hay test runner configurado; la verificación se hace con `npm run lint` y `npx tsc --noEmit`.
+No hay test runner configurado; la verificación se hace con `yarn lint` y `yarn tsc --noEmit`.
 
 ## Configuración
 
@@ -52,6 +52,7 @@ El producto se especifica en [`docs/PRD.md`](docs/PRD.md). Las estrategias de im
 
 ## Changelog
 
+- **2026-07-09 — PAR-25 (M8)**: se cierra el hueco de calidad de datos por el que un vuelo podía guardarse con 0.0 h sin aviso. En `app/flight/new.tsx`, cuando el total de horas se deriva del intervalo de bloque (PAR-13) y el usuario deja `blockOut`/`blockIn` vacíos, el total caía a 0 y `handleSave` lo persistía en silencio. Ahora, tras las validaciones existentes (fecha, ruta/sitio, rango PAR-5), `handleSave` detecta intervalo de bloque incompleto o total derivado igual a 0 y muestra un `Alert` de **confirmación** ("¿Guardar sin horas?") con dos acciones: *Cancelar* (permanece en el formulario) y *Guardar de todos modos* (persiste el registro). Se optó por confirmación en vez de bloqueo duro para no impedir casos legítimos, rompiendo el silencio. La lógica de guardado se extrajo a `persistFlight()` para invocarse directa o tras confirmar. El flujo normal (total > 0) no muestra fricción. Sin cambios de esquema; claves i18n nuevas `flight.new.zeroHoursTitle/zeroHoursMsg/zeroHoursConfirm` en es/en/pt. Verificado: `tsc --noEmit` limpio. Estrategia: `docs/tickets/PAR-25.md`.
 - **2026-07-09 — PAR-28 (L3)**: se elimina la duplicación de `fetchWithTimeout`, que estaba copiada idéntica en `src/api/awc.ts` y `src/api/swpc.ts`. Ahora vive en un único módulo `src/utils/fetchWithTimeout.ts` (función pura y tipada, `fetch` + `AbortController` con timeout en ms, `clearTimeout` en `finally`); ambos clientes de API la importan vía `../utils/fetchWithTimeout`. Sin cambios de comportamiento (mismo timeout de 8 s en METAR y Kp) ni de esquema ni i18n. `grep -rn "function fetchWithTimeout" src` confirma una sola definición y `npx tsc --noEmit` queda limpio. Base para PAR-22 (M5), que reutilizará el helper para las llamadas de geocoding/Wikipedia sin timeout. Estrategia: `docs/tickets/PAR-28.md`.
 - **2026-07-09 — PAR-15 (A2)**: se deja funcional la red de seguridad de lint. El script `npm run lint` (`eslint .`) fallaba porque ESLint no estaba instalado ni configurado. Ahora `eslint@^9` y `eslint-config-expo@~10` están en `devDependencies` con una flat config (`eslint.config.js`) que extiende `eslint-config-expo/flat` e ignora `dist`/`node_modules`/`.expo`. Se corrigieron las violaciones triviales que afloraron: import muerto `Download` en `app/(tabs)/logbook.tsx` (evidencia original del ticket), imports/variables sin usar (`useEffect` en `signin`, `Animated` en `signup`, `Platform`/`useMutation`/`Circle`/`statusColor` en `checklist/[id]/execute`, `setPicTime` en `flight/new`, `isDark` + su import en `FlightConditionsBanner`, `forecastLoading` en `kp`) y las reglas de estilo autofixables (`array-type` → `T[]`). El único hallazgo restante (`import/no-named-as-default-member` sobre `i18n.use(...)`, un falso positivo del patrón de encadenamiento de i18next) se silencia puntualmente con un `eslint-disable-next-line` justificado. Resultado: `npm run lint` termina en **0 errores, 0 warnings** y `npx tsc --noEmit` sigue limpio. El comando queda documentado como paso de verificación (el proyecto no tiene test runner). Habilita PAR-26 (L1) y PAR-27 (L2). Estrategia: `docs/tickets/PAR-15.md`.
 - **2026-07-09 — PAR-35 (fix)**: el Home a veces quedaba en blanco al navegar desde Kp. El botón "← Home" de `app/(tabs)/kp.tsx` hacía `router.navigate('/')`, y la ruta `/` es `app/index.tsx` (`EntryScreen`), un gate de auth que solo muestra un `ActivityIndicator` y hacía la redirección real dentro de un `useEffect(..., [])` que corre únicamente al montar; si esa instancia de `/` seguía viva en el stack (Expo Router puede reusarla sin remontar), el efecto no volvía a ejecutarse y la pantalla se quedaba en el loader/blanco. Se corrigió el destino a `router.navigate('/(tabs)')` (el tab Home ya montado) y, como defensa en profundidad, se endureció `EntryScreen` para que resuelva el estado de auth y renderice un `<Redirect href=... />` declarativo de expo-router en vez de navegar imperativamente en el `useEffect`: aunque se vuelva a entrar a `/` estando ya montada, la redirección siempre ocurre y nunca queda un loader colgado. Sin cambios de esquema ni i18n. Verificado: `tsc --noEmit` y `eslint` limpios (solo warnings preexistentes ajenos al cambio), grep confirma que ya no hay otros `navigate('/')`/`push('/')`. Estrategia: `docs/tickets/PAR-35.md`.

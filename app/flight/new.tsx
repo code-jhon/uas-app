@@ -321,6 +321,33 @@ export default function NewFlightScreen() {
       Alert.alert(t('flight.new.missingTitle'), t('dateTimeRange.invalidTime')); return;
     }
 
+    // PAR-25: no guardar en silencio un vuelo sin horas. Si el intervalo de
+    // bloque está incompleto o el total derivado (PAR-13) es 0, pedir
+    // confirmación explícita en vez de persistir 0.0 h sin aviso.
+    const derivedTotal = parseFloat(totalTime);
+    if (!blockOut || !blockIn || !(derivedTotal > 0)) {
+      Alert.alert(
+        t('flight.new.zeroHoursTitle'),
+        t('flight.new.zeroHoursMsg'),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('flight.new.zeroHoursConfirm'),
+            style: 'destructive',
+            onPress: () => { void persistFlight(); },
+          },
+        ],
+      );
+      return;
+    }
+
+    await persistFlight();
+  };
+
+  // Persiste el vuelo (creación en BD + vinculación de checklists). Separado de
+  // handleSave para poder invocarse directamente o tras confirmar el aviso de
+  // 0.0 h (PAR-25).
+  const persistFlight = async () => {
     setSaving(true);
     try {
       // totalTime ya viene derivado del intervalo (PAR-13); no hace falta
