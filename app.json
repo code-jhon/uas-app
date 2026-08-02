@@ -6,11 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0f172a"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.pilotlog.app"
@@ -32,6 +27,20 @@
     "plugins": [
       "expo-router",
       "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#070B14",
+          "image": "./assets/splash.jpg",
+          "resizeMode": "cover",
+          "enableFullScreenImage_legacy": true,
+          "android": {
+            "image": "./assets/splash-android.png",
+            "resizeMode": "contain",
+            "imageWidth": 200
+          }
+        }
+      ],
       [
         "expo-sqlite",
         {
