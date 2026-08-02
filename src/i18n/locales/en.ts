@@ -318,6 +318,7 @@ const en: Resources = {
       confirmSkip: 'Confirm skip',
       reason: 'Reason: {{note}}',
       skip: 'Skip',
+      saveResultError: 'Could not save the result. Please try again.',
     },
   },
 

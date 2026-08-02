@@ -316,6 +316,7 @@ const es = {
       confirmSkip: 'Confirmar omisión',
       reason: 'Motivo: {{note}}',
       skip: 'Omitir',
+      saveResultError: 'No se pudo guardar el resultado. Inténtalo de nuevo.',
     },
   },
 

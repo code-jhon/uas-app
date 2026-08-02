@@ -318,6 +318,7 @@ const pt: Resources = {
       confirmSkip: 'Confirmar omissão',
       reason: 'Motivo: {{note}}',
       skip: 'Pular',
+      saveResultError: 'Não foi possível salvar o resultado. Tente novamente.',
     },
   },
 
